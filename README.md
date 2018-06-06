@@ -1,4 +1,4 @@
-README
-======
+About
+=====
 
-Let's start with this.
+Reaping Preemptible Instances for you!
