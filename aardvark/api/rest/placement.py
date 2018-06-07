@@ -15,21 +15,28 @@
 
 from keystoneauth1 import exceptions as keystone_exc
 from keystoneauth1 import loading as keystone_loading
-from oslo_config import cfg
+
+import aardvark.conf
+
+
+CONF = aardvark.conf.CONF
 
 
 class PlacementClient(object):
     """Client class for querying Placement API"""
+
+    keystone_filter = {'service_type': 'placement'}
 
     def __init__(self):
         self.client = self._create_client()
 
     def _create_client(self):
         """Creates the client to Placement API"""
+        #import pdb; pdb.set_trace()
         auth_plugin = keystone_loading.load_auth_from_conf_options(
-            cfg.CONF, 'placement')
-        client = k_loading.load_session_from_conf_options(
-            cfg.CONF, 'placement', auth=auth_plugin)
+            CONF, 'placement')
+        client = keystone_loading.load_session_from_conf_options(
+            CONF, 'placement', auth=auth_plugin)
         client.additional_headers = {'accept': 'application/json'}
         return client
 
@@ -43,4 +50,6 @@ class PlacementClient(object):
         : param filters: A dictionary of filters to be passes to Placement API
                          If None, returns all the RPs in the system
         """
-        pass
+        url = '/resource_providers'
+        resource_providers = self._get(url)
+        return resource_providers
