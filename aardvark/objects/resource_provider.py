@@ -13,8 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from aardvark.objects import base
 
-class ResourceProvider(object):
+class ResourceProvider(base.PlacementObjectWrapper):
 
-    def __init__(self):
-        pass
+    _attrs = ['usages', 'inventories']
+
+    def __init__(self, uuid):
+        super(ResourceProvider, self).__init__(uuid=uuid)
+        self.uuid = uuid

@@ -13,7 +13,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-__import__('aardvark.objects.base')
-__import__('aardvark.objects.resource_provider')
-__import__('aardvark.objects.resources')
-__import__('aardvark.objects.usage')
+from aardvark.backend.api.rest import placement as client
+
+class ResourceProvider(object):
+
+    def __init__(self, uuid):
+        self.uuid = uuid
+        self.client = client.PlacementClient()
+
+    @property
+    def usages(self):
+        return self.client.usages(self.uuid)
+
+    @property
+    def inventories(self):
+        return self.client.inventories(self.uuid)

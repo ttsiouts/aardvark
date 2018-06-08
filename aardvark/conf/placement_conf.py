@@ -10,7 +10,17 @@ placement_group = cfg.OptGroup(
     help="Configuration options for connecting to the placement API service")
 
 placement_opts = [
-    # Add conf options for Placement
+    cfg.StrOpt("backend",
+        default="api",
+        help="""
+Selects where the placement info, are going to be loaded from.
+
+The options are:
+
+* 'api': Use the standard Placement API
+* 'db' : Connect directly to the Placement DB
+"""
+    ),
 ]
 
 

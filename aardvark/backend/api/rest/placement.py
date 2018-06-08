@@ -70,7 +70,6 @@ class PlacementClient(object):
 
     def _create_client(self):
         """Creates the client to Placement API"""
-        #import pdb; pdb.set_trace()
         auth_plugin = keystone_loading.load_auth_from_conf_options(
             CONF, 'placement')
         client = keystone_loading.load_session_from_conf_options(
@@ -78,13 +77,12 @@ class PlacementClient(object):
         client.additional_headers = {'accept': 'application/json'}
         return client
 
-    @object_map
     def _get(self, url, obj=None, **kwargs):
         response = self.client.get(url, endpoint_filter=self.keystone_filter,
-                                  **kwargs)
-        return response, obj
+                                   raise_exc=False, microversion='1.6')
+        return response
 
-    def get_resource_providers(self, filters=None):
+    def resource_providers(self, filters=None):
         """Returns the resource providers from Placement API
 
         : param filters: A dictionary of filters to be passes to Placement API
@@ -94,27 +92,12 @@ class PlacementClient(object):
         resource_providers = self._get(url)
         return resource_providers
 
-    def get_inventory(self, resource_provider_uuid, resource_class):
-        """Get resource provider inventory.
-        :param resource_provider_uuid: UUID of the resource provider
-        :type resource_provider_uuid: str
-        :param resource_class: Resource class name of the inventory to be
-          returned
-        :type resource_class: str
-        :raises c_exc.PlacementInventoryNotFound: For failure to find inventory
-          for a resource provider
-        """
-        url = '/resource_providers/%s/inventories/%s' % (
-            resource_provider_uuid, resource_class)
-        return self._get(url)
-
-    def get_provider_usages(self, resource_provider):
+    def usages(self, resource_provider):
         """Returns the usages of a given provider
 
         :param resource_provider: the provider to search for
         """
-        # obj = 'Usage'
-        url = "resource_providers/%s/usages" % resource_provider
-        # response = self._get(url, obj)
+        url = "/resource_providers/%s/usages" % resource_provider
         response = self._get(url)
+        print url
         return response
