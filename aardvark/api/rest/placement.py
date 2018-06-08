@@ -1,4 +1,4 @@
-# Copyright (c) 2018 CERN.
+# Copyright (c) 2018 European Organization for Nuclear Research.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -22,6 +22,44 @@ import aardvark.conf
 CONF = aardvark.conf.CONF
 
 
+def exception_map(f):
+    """Catches keystone exceptions
+
+    Wraper that tries to catch excetpions from keystone and map them to
+    aardvark equivalents.
+    """
+    def wrapper(self, *a, **k):
+        try:
+            return f(self, *a, **k)
+        except keystone_exc.NotFound:
+            # TODO: map the exceptions
+            return None
+    return wrapper
+
+
+def object_map(f):
+    """Catches keystone exceptions
+    """
+    @exception_map
+    def map_response_to_object(self, *a, **k):
+        """Maps Placement response to object"""
+        response, obj = f(self, *a, **k)
+
+        if not response:
+            return None
+
+        json = response.json()
+        if not obj:
+            return json
+
+        # Map the json to the given object
+        module = __import__('aardvark.objects')
+        cls = getattr(module, obj)
+        return cls.from_dict()
+
+    return map_response_to_object
+
+
 class PlacementClient(object):
     """Client class for querying Placement API"""
 
@@ -40,9 +78,11 @@ class PlacementClient(object):
         client.additional_headers = {'accept': 'application/json'}
         return client
 
-    def _get(self, url, **kwargs):
-        return self.client.get(url, endpoint_filter=self.keystone_filter,
-                               **kwargs)
+    @object_map
+    def _get(self, url, obj=None, **kwargs):
+        response = self.client.get(url, endpoint_filter=self.keystone_filter,
+                                  **kwargs)
+        return response, obj
 
     def get_resource_providers(self, filters=None):
         """Returns the resource providers from Placement API
@@ -53,3 +93,28 @@ class PlacementClient(object):
         url = '/resource_providers'
         resource_providers = self._get(url)
         return resource_providers
+
+    def get_inventory(self, resource_provider_uuid, resource_class):
+        """Get resource provider inventory.
+        :param resource_provider_uuid: UUID of the resource provider
+        :type resource_provider_uuid: str
+        :param resource_class: Resource class name of the inventory to be
+          returned
+        :type resource_class: str
+        :raises c_exc.PlacementInventoryNotFound: For failure to find inventory
+          for a resource provider
+        """
+        url = '/resource_providers/%s/inventories/%s' % (
+            resource_provider_uuid, resource_class)
+        return self._get(url)
+
+    def get_provider_usages(self, resource_provider):
+        """Returns the usages of a given provider
+
+        :param resource_provider: the provider to search for
+        """
+        # obj = 'Usage'
+        url = "resource_providers/%s/usages" % resource_provider
+        # response = self._get(url, obj)
+        response = self._get(url)
+        return response

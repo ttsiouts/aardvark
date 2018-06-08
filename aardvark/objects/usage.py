@@ -13,7 +13,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import pbr.version
 
+class Usage(object):
 
-version_info = pbr.version.VersionInfo('aardvark')
+    def __init__(self, resource, amount):
+        self.resource = resource
+        self.amount = amount
+
+class UsageList(object):
+
+    @classmethod
+    def not_sure_yet(cls):
+        pass
