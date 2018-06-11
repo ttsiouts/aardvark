@@ -14,6 +14,9 @@
 #    under the License.
 
 from aardvark.backend.api.rest import placement as client
+from aardvark.objects import capabilities
+from aardvark.objects import inventory
+
 
 class ResourceProvider(object):
 
@@ -26,5 +29,18 @@ class ResourceProvider(object):
         return self.client.usages(self.uuid)
 
     @property
+    def all_usages(self):
+        return self.client.all_usages()
+
+    @property
     def inventories(self):
         return self.client.inventories(self.uuid)
+
+    @property
+    def resource_classes(self):
+        return self.client.resource_classes()
+
+    @property
+    def capabilities(self):
+        return capabilities.Capabilities.obj_from_primitive(
+            self.inventories, self.usages)

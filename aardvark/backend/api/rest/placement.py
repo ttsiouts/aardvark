@@ -77,11 +77,12 @@ class PlacementClient(object):
         client.additional_headers = {'accept': 'application/json'}
         return client
 
-    def _get(self, url, obj=None, **kwargs):
+    def _get(self, url, obj=None, version='1.17', **kwargs):
         response = self.client.get(url, endpoint_filter=self.keystone_filter,
-                                   raise_exc=False, microversion='1.6')
-        return response
+                                   microversion=version)
+        return response.json()
 
+    @exception_map
     def resource_providers(self, filters=None):
         """Returns the resource providers from Placement API
 
@@ -92,6 +93,7 @@ class PlacementClient(object):
         resource_providers = self._get(url)
         return resource_providers
 
+    @exception_map
     def usages(self, resource_provider):
         """Returns the usages of a given provider
 
@@ -99,5 +101,54 @@ class PlacementClient(object):
         """
         url = "/resource_providers/%s/usages" % resource_provider
         response = self._get(url)
-        print url
+        return response['usages']
+
+    @exception_map
+    def inventory(self, resource_provider_uuid, resource_class):
+        """Returns the resource providers from Placement API
+
+        : param filters: A dictionary of filters to be passes to Placement API
+                         If None, returns all the RPs in the system
+        """
+        url = '/resource_providers/%s/inventories/%s' % (
+            resource_provider_uuid, resource_class)
+        response = self._get(url)
+        return response
+
+    @exception_map
+    def inventories(self, resource_provider_uuid):
+        """Returns the resource providers from Placement API
+
+        : param filters: A dictionary of filters to be passes to Placement API
+                         If None, returns all the RPs in the system
+        """
+        url = '/resource_providers/%s/inventories' % resource_provider_uuid
+        response = self._get(url)
+        return response['inventories']
+
+    @exception_map
+    def resource_classes(self):
+        url = '/resource_classes'
+        resource_classes = self._get(url)
+        return resource_classes
+
+    @exception_map
+    def all_inventories(self):
+        """Returns the resource providers from Placement API
+
+        : param filters: A dictionary of filters to be passes to Placement API
+                         If None, returns all the RPs in the system
+        """
+        url = '/resource_providers/inventories'
+        inventories = self._get(url)
+        return inventories
+
+    @exception_map
+    def all_usages(self):
+        """Returns the usages of a given provider
+
+        :param resource_provider: the provider to search for
+        """
+        url = "/resource_providers/usages"
+        response = self._get(url)
         return response

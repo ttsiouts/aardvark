@@ -17,7 +17,8 @@ from aardvark.objects import base
 
 class ResourceProvider(base.PlacementObjectWrapper):
 
-    _attrs = ['usages', 'inventories']
+    _attrs = ['usages', 'inventories', 'all_usages', 'resource_classes',
+              'capabilities']
 
     def __init__(self, uuid):
         super(ResourceProvider, self).__init__(uuid=uuid)

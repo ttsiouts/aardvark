@@ -14,6 +14,7 @@
 #    under the License.
 
 __import__('aardvark.objects.base')
+__import__('aardvark.objects.capabilities')
+__import__('aardvark.objects.inventory')
 __import__('aardvark.objects.resource_provider')
-__import__('aardvark.objects.resources')
 __import__('aardvark.objects.usage')
