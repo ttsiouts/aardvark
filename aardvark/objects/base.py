@@ -33,7 +33,7 @@ class PlacementObjectWrapper(object):
     _resource = None
 
     def __init__(self,  **kwargs):
-        placement_backend = "aardvark.backend.%s" % CONF.placement.backend
+        placement_backend = "aardvark.%s" % CONF.placement.backend
         module = importutils.try_import(placement_backend)
 
         class_ = getattr(module, self.__class__.__name__)

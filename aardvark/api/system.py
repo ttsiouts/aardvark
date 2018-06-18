@@ -13,34 +13,25 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from aardvark.backend.api.rest import placement as client
-from aardvark.objects import capabilities
+from aardvark.api.rest import placement as client
+from aardvark.objects import resource_provider as rp_obj
 from aardvark.objects import inventory
 
 
-class ResourceProvider(object):
+class System(object):
 
-    def __init__(self, uuid):
-        self.uuid = uuid
+    def __init__(self):
         self.client = client.PlacementClient()
 
     @property
-    def usages(self):
-        return self.client.usages(self.uuid)
-
-    @property
-    def all_usages(self):
-        return self.client.all_usages()
-
-    @property
-    def inventories(self):
-        return self.client.inventories(self.uuid)
+    def resource_providers(self):
+        rps = self.client.resource_providers()
+        return [rp_obj.ResourceProvider(rp['uuid']) for rp in rps]
 
     @property
     def resource_classes(self):
-        return self.client.resource_classes()
+        return (rc['name'] for rc in self.client.resource_classes())
 
     @property
-    def capabilities(self):
-        return capabilities.Capabilities.obj_from_primitive(
-            self.inventories, self.usages)
+    def traits(self):
+        return (trait for trait in self.client.traits())

@@ -2,8 +2,8 @@ import sys
 
 from oslo_config import cfg
 
-from aardvark.backend.api.rest import placement
-from aardvark.backend import api
+from aardvark.api.rest import placement
+from aardvark import api
 from aardvark import version
 from aardvark.objects import resource_provider as rp_obj
 from aardvark.objects import system as system_obj
