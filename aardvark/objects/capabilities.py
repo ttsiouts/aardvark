@@ -28,22 +28,26 @@ class Capabilities(object):
 
     @classmethod
     def obj_from_primitive(self, primitive, usage=None):
-        inventories = list()
+        inventories = dict()
         for rc, kwargs in primitive.items():
             if usage:
                 # NOTE(ttsiouts): If usage is provided add also the used
                 kwargs.update({
                     'used': usage[rc],
                 })
-            inventories.append(inventory.Inventory(rc, **kwargs))
+            inventories.update({rc: inventory.Inventory(rc, **kwargs)})
         return Capabilities(inventories)
 
-    #def __add__(self, other):
-    #    resources = self.resources | other.resources
-    #    new = dict()
-    #    for res in resources:
-    #        new[res] = getattr(self, res, 0) + getattr(other, res, 0)
-    #    return Resources(new)
+    @property
+    def resource_classes(self):
+        return set([inv.resource_class for _, inv in self.inventories.items()])
+
+    def __add__(self, other):
+        resource_classes = self.resource_classes | other.resource_classes
+        new = dict()
+        for rc in resource_classes:
+             new.update({rc: self.inventories[rc] + other.inventories[rc]})
+        return Capabilities(new)
 
     #def __sub__(self, other):
     #    resources = self.resources | other.resources
@@ -132,7 +136,7 @@ class Capabilities(object):
     #    return resp
 
     def __repr__(self):
-        text = ', '.join([inv.to_str() for inv in self.inventories])
+        text = ', '.join([inv.to_str() for _,inv in self.inventories.items()])
         return '<Capabilities(%s)>' % text
 
     #def to_dict(self):

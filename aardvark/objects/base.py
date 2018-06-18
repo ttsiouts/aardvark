@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from stevedore import driver
+from oslo_utils import importutils
 
 import aardvark.conf
 
@@ -33,14 +33,13 @@ class PlacementObjectWrapper(object):
     _resource = None
 
     def __init__(self,  **kwargs):
-        placement_backend = CONF.placement.backend
-        module = __import__('aardvark.backend.%s' % placement_backend,
-            globals(), locals(), ['object'], -1)
+        placement_backend = "aardvark.backend.%s" % CONF.placement.backend
+        module = importutils.try_import(placement_backend)
 
-        cls = getattr(module, self.__class__.__name__)
+        class_ = getattr(module, self.__class__.__name__)
         # NOTE(ttsiouts): this is the backend resource where the object's info
         # are loaded from.
-        self._resource = cls(**kwargs)
+        self._resource = class_(**kwargs)
 
     def __getattribute__(self, attr):
         # NOTE(ttsiouts): if the attribute is not set, load it from the
@@ -54,11 +53,15 @@ class PlacementObjectWrapper(object):
             setattr(self, attr, value)
             return value
 
+    def reinit_object(self):
+        for attr in self._attrs:
+            if hasattr(self, attr):
+                delattr(self, attr)
+
     def __repr__(self):
-        return "<%s: %s>" % (self.__class__.__name__,
-                             dict((attr, getattr(self, attr))
-                                  for attr in self._attrs
-                                  if hasattr(self, attr)))
+        to_string = ", ".join("%s = %s" % (attr, getattr(self, attr)) 
+                              for attr in self._attrs if hasattr(self, attr))
+        return "<%s: %s>" % (self.__class__.__name__, to_string)
 
     def to_dict(self):
         obj = {}

@@ -12,6 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import aardvark.conf
+
+CONF = aardvark.conf.CONF
 
 class Inventory(object):
 
@@ -33,11 +36,24 @@ class Inventory(object):
     @property
     def percentage(self):
         # NOTE(ttsiouts): multiply with 100 to avoid float for start...
-        return ((self.reserved + self.used) * 100)/ self.total
+        return (self.reserved + self.used)*100/ self.total
+
+    @property
+    def limit(self):
+        #return self.total * (CONF.aardvark.watermak / 100)
+        return self.total * (75 / 100)
+
+    def __add__(self, other):
+        kwargs = {
+            'used': self.used + other.used,
+            'reserved': self.reserved + other.reserved,
+            'total': self.total + other.total,
+        }
+        return Inventory(self.resource_class, **kwargs)
 
     def __repr__(self):
         return self.to_str()
 
     def to_str(self):
-        return "<Inventory: %s: total: %s percentage: %s>" % (
-            self.resource_class, self.total, self.percentage)
+        return "<Inventory: %s: total: %s , used: %s, reserved: %s, usage: %s%%>" % (
+            self.resource_class, self.total, self.used, self.reserved, self.percentage)

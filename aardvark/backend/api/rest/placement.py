@@ -86,12 +86,12 @@ class PlacementClient(object):
     def resource_providers(self, filters=None):
         """Returns the resource providers from Placement API
 
-        : param filters: A dictionary of filters to be passes to Placement API
-                         If None, returns all the RPs in the system
+        :param filters: A dictionary of filters to be passes to Placement API
+                        If None, returns all the RPs in the system
         """
         url = '/resource_providers'
         resource_providers = self._get(url)
-        return resource_providers
+        return resource_providers['resource_providers']
 
     @exception_map
     def usages(self, resource_provider):
@@ -107,8 +107,8 @@ class PlacementClient(object):
     def inventory(self, resource_provider_uuid, resource_class):
         """Returns the resource providers from Placement API
 
-        : param filters: A dictionary of filters to be passes to Placement API
-                         If None, returns all the RPs in the system
+        :param filters: A dictionary of filters to be passes to Placement API
+                        If None, returns all the RPs in the system
         """
         url = '/resource_providers/%s/inventories/%s' % (
             resource_provider_uuid, resource_class)
@@ -119,8 +119,8 @@ class PlacementClient(object):
     def inventories(self, resource_provider_uuid):
         """Returns the resource providers from Placement API
 
-        : param filters: A dictionary of filters to be passes to Placement API
-                         If None, returns all the RPs in the system
+        :param filters: A dictionary of filters to be passes to Placement API
+                        If None, returns all the RPs in the system
         """
         url = '/resource_providers/%s/inventories' % resource_provider_uuid
         response = self._get(url)
@@ -130,7 +130,7 @@ class PlacementClient(object):
     def resource_classes(self):
         url = '/resource_classes'
         resource_classes = self._get(url)
-        return resource_classes
+        return resource_classes['resource_classes']
 
     @exception_map
     def all_inventories(self):
@@ -144,11 +144,24 @@ class PlacementClient(object):
         return inventories
 
     @exception_map
-    def all_usages(self):
+    def project_usages(self, project_id, user_id=None):
         """Returns the usages of a given provider
 
         :param resource_provider: the provider to search for
         """
-        url = "/resource_providers/usages"
+        url = "/usages?project_id=%s" % project_id
+        if not user_id is None:
+            url += "&user_id=%s" % user_id
+        
         response = self._get(url)
-        return response
+        return response['usages']
+
+    @exception_map
+    def traits(self):
+        """Returns the usages of a given provider
+
+        :param resource_provider: the provider to search for
+        """
+        url = "/traits"
+        response = self._get(url)
+        return response['traits']

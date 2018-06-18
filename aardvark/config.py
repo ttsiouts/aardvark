@@ -22,16 +22,11 @@ from aardvark import version
 CONF = aardvark.conf.CONF
 
 
-def parse_args(argv, default_config_files=None, configure_db=True,
-               init_rpc=True):
+def parse_args(argv, default_config_files=None):
     log.register_options(CONF)
-    log.set_defaults(default_log_levels=log.get_default_log_levels() +
-                     extra_default_log_levels)
-    rpc.set_defaults(control_exchange='nova')
-    if profiler:
-        profiler.set_defaults(CONF)
+    log.set_defaults(default_log_levels=log.get_default_log_levels())
 
     CONF(argv[1:],
-         project='nova',
-         version=version.version_string(),
+         project='aardvark',
+         version=version.version_info,
          default_config_files=default_config_files)
