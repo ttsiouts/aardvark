@@ -30,3 +30,4 @@ About
 =====
 
 Reaping Preemptible Instances for you!
+Refernces: https://www.youtube.com/watch?v=ClQcUyhoxTg
