@@ -1,16 +1,3 @@
-# All Rights Reserved.
-#
-#    Licensed under the Apache License, Version 2.0 (the "License"); you may
-#    not use this file except in compliance with the License. You may obtain
-#    a copy of the License at
-#
-#         http://www.apache.org/licenses/LICENSE-2.0
-#
-#    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-#    License for the specific language governing permissions and limitations
-#    under the License.
 
 import aardvark.conf
 
@@ -40,8 +27,14 @@ class Inventory(object):
 
     @property
     def limit(self):
-        #return self.total * (CONF.aardvark.watermak / 100)
-        return self.total * (75 / 100)
+        return self.total * (CONF.aardvark.watermak / 100)
+
+    @property
+    def excessive(self):
+        if self.used + self.reserved <= self.limit:
+            return 0
+        else:
+            return self.used + self.reserved - self.limit
 
     def __add__(self, other):
         kwargs = {
@@ -55,5 +48,6 @@ class Inventory(object):
         return self.to_str()
 
     def to_str(self):
-        return "<Inventory: %s: total: %s , used: %s, reserved: %s, usage: %s%%>" % (
-            self.resource_class, self.total, self.used, self.reserved, self.percentage)
+        return "<Inventory: %s: total: %s , used: %s, usage: %s%%>" % (
+            self.resource_class, self.total, self.used + self.reserved,
+            self.percentage)
