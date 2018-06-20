@@ -58,5 +58,4 @@ class SystemStateCalculatorManager(periodic_task.PeriodicTasks):
                                  run_immediately=True)
     def calculate_system_state(self, context, startup=True):
         LOG.info('periodic Task timer expired')
-        LOG.info('self.system')
         print self.system.state()
