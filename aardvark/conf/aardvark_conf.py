@@ -9,7 +9,7 @@ aardvark_group = cfg.OptGroup(
 
 aardvark_opts = [
     cfg.IntOpt('watermark',
-               default=75,
+               default=55,
                help="""
 Max usage per resource class.
 
