@@ -43,6 +43,7 @@ def prepare_service(argv=None):
 # Move this out
 from oslo_service import periodic_task
 from aardvark.objects import system
+from aardvark.reaper import reaper
 
 
 class SystemStateCalculatorManager(periodic_task.PeriodicTasks):
@@ -50,6 +51,7 @@ class SystemStateCalculatorManager(periodic_task.PeriodicTasks):
     def __init__(self):
         super(SystemStateCalculatorManager, self).__init__(CONF)
         self.system = system.System()
+        self.reaper = reaper.Reaper()
 
     def periodic_tasks(self, context, raise_on_error=False):
         return self.run_periodic_tasks(context, raise_on_error=raise_on_error)
@@ -57,5 +59,19 @@ class SystemStateCalculatorManager(periodic_task.PeriodicTasks):
     @periodic_task.periodic_task(spacing=CONF.periodic_interval,
                                  run_immediately=True)
     def calculate_system_state(self, context, startup=True):
+
         LOG.info('periodic Task timer expired')
-        print self.system.state()
+        system_usage = self.system.usage()
+
+        if system_usage > CONF.aardvark.watermark:
+            LOG.info("Over limit")
+            resource_request = system_usage.get_excessive_resources()
+
+            # Devide the resource request with the number of Resource
+            # Providers and request for more slots
+            number_rps = len(self.system.resource_providers)
+            self.reaper.handle_request(resource_request/number_rps,
+                                       self.system, slots=number_rps)
+        # Remove the cached info, to reload from the backend on the
+        # next periodic run
+        self.system.empty_cache()
