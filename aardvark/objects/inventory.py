@@ -12,26 +12,28 @@ class Inventory(object):
         self.resource_class = resource_class
         for attr in self._attrs:
             try:
-                setattr(self, attr, kwargs[attr])
+                setattr(self, attr, float(kwargs[attr]))
             except KeyError:
-                setattr(self, attr, 0)
+                setattr(self, attr, 0.0)
 
     @property
     def free(self):
         return self.total - (self.reserved + self.used)
 
     @property
-    def percentage(self):
+    def usage(self):
         # NOTE(ttsiouts): multiply with 100 to avoid float for start...
-        return (self.reserved + self.used)*100/ self.total
+        if self.total:
+            return (self.reserved + self.used)*100/ self.total
+        return 0
 
     @property
     def limit(self):
-        return self.total * (CONF.aardvark.watermak / 100)
+        return (self.total * CONF.aardvark.watermark) / 100
 
     @property
     def excessive(self):
-        if self.used + self.reserved <= self.limit:
+        if self.usage <= CONF.aardvark.watermark:
             return 0
         else:
             return self.used + self.reserved - self.limit
@@ -50,4 +52,4 @@ class Inventory(object):
     def to_str(self):
         return "<Inventory: %s: total: %s , used: %s, usage: %s%%>" % (
             self.resource_class, self.total, self.used + self.reserved,
-            self.percentage)
+            self.usage)

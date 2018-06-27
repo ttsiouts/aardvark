@@ -16,12 +16,14 @@
 from aardvark.api.rest import placement as client
 from aardvark.objects import capabilities
 from aardvark.objects import inventory
+from aardvark.objects import resource_provider as rp_obj
 
 
 class ResourceProvider(object):
 
-    def __init__(self, uuid):
+    def __init__(self, uuid, name):
         self.uuid = uuid
+        self.name = name
         self.client = client.PlacementClient()
 
     @property
@@ -44,3 +46,14 @@ class ResourceProvider(object):
     def capabilities(self):
         return capabilities.Capabilities.obj_from_primitive(
             self.inventories, self.usages)
+
+
+class ResourceProviderList(object):
+
+    def __init__(self):
+        self.client = client.PlacementClient()
+
+    @property
+    def resource_providers(self):
+        rps = self.client.resource_providers()
+        return [rp_obj.ResourceProvider(rp['uuid'], rp['name']) for rp in rps]

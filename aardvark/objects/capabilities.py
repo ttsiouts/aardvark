@@ -14,6 +14,7 @@
 #    under the License.
 
 from aardvark.objects import inventory 
+from aardvark.objects import resources 
 
 
 class Capabilities(object):
@@ -26,8 +27,8 @@ class Capabilities(object):
     def __init__(self, inventories=None):
         self.inventories = inventories
 
-    @classmethod
-    def obj_from_primitive(self, primitive, usage=None):
+    @staticmethod
+    def obj_from_primitive(primitive, usage=None):
         inventories = dict()
         for rc, kwargs in primitive.items():
             if usage:
@@ -38,17 +39,38 @@ class Capabilities(object):
             inventories.update({rc: inventory.Inventory(rc, **kwargs)})
         return Capabilities(inventories)
 
+    @staticmethod
+    def obj_from_resources(resources):
+        inventories = dict()
+        for rc, value in resources.to_dict().items():
+            if value < 0:
+                inventories.update({rc: inventory.Inventory(rc, used=value)})
+            else:
+                inventories.update({rc: inventory.Inventory(rc, total=value)})
+        return Capabilities(inventories)
+
     @property
     def resource_classes(self):
         return set([inv.resource_class for _, inv in self.inventories.items()])
+
+    @property
+    def free_resources(self):
+        free = {rc: inv.free for rc, inv in self.inventories.items()}
+        return resources.Resources(free)
 
     def __add__(self, other):
         resource_classes = self.resource_classes | other.resource_classes
         new = dict()
         for rc in resource_classes:
-             new.update({rc: self.inventories[rc] + other.inventories[rc]})
+            new.update({
+                rc: self.inventories.get(rc, inventory.Inventory(rc))  + self.inventories.get(rc, inventory.Inventory(rc))})
         return Capabilities(new)
 
+    def get_excessive_resources(self):
+        request = {rc: inv.excessive for rc, inv in self.inventories.items()
+                   if inv.excessive != 0}
+        return resources.Resources(request)
+        
     #def __sub__(self, other):
     #    resources = self.resources | other.resources
     #    new = dict()
@@ -111,11 +133,8 @@ class Capabilities(object):
     #def __ne__(self, other):
     #    return not self == other
 
-    #def __gt__(self, other):
-    #    resp = True
-    #    for res in self.resources:
-    #        resp = resp and getattr(self, res) > getattr(other, res, 0)
-    #    return resp
+    def __gt__(self, other):
+        return any(inv.usage > other for _,inv in self.inventories.items())
 
     #def __lt__(self, other):
     #    resp = True

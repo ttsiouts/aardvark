@@ -14,11 +14,54 @@
 #    under the License.
 
 from aardvark.objects import base
+from aardvark.objects import capabilities
+from aardvark.objects import resources
 
 class ResourceProvider(base.PlacementObjectWrapper):
 
-    _attrs = ['uuid', 'usages', 'capabilities']
+    _attrs = ['uuid', 'name', 'usages', 'capabilities']
 
-    def __init__(self, uuid):
-        super(ResourceProvider, self).__init__(uuid=uuid)
+    def __init__(self, uuid, name):
+        super(ResourceProvider, self).__init__(uuid=uuid, name=name)
         self.uuid = uuid
+        self.name = name
+        self._preemptible_servers = list()
+        self._free_resources = None
+        self._reserved_resources = resources.Resources()
+
+    @property
+    def preemptible_servers(self):
+        return self._preemptible_servers
+
+    @preemptible_servers.setter
+    def preemptible_servers(self, new):
+        self._preemptible_servers = new
+
+    @property
+    def preemptible_resources(self):
+        preempt = resources.Resources()
+        for server in self.preemptible_servers:
+            preempt += server.resources
+        return preempt
+
+    @property
+    def free_resources(self):
+        return self.capabilities.free_resources
+
+    def reserve_resources(self, new):
+        # WRONG!
+        self.capabilities += capabilities.Capabilities.obj_from_resources(new)
+
+    def __eq__(self, other):
+        return self.uuid == other.uuid
+
+    def __hash__(self):
+        return hash(self.uuid)
+
+
+class ResourceProviderList(base.PlacementObjectWrapper):
+
+    _attrs = ['resource_providers']
+
+    def __init__(self):
+        super(ResourceProviderList, self).__init__()

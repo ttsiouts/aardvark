@@ -13,25 +13,22 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from aardvark.api.rest import placement as client
-from aardvark.objects import resource_provider as rp_obj
-from aardvark.objects import inventory
+from aardvark.objects import base
 
 
-class System(object):
+class Project(object):
+
+    _attrs = ['id_', 'name', 'preemptible']
+
+    def __init__(self, id_, name, preemptible=False):
+        self.id_ = id_
+        self.name = name
+        self.preemptible = preemptible
+
+
+class ProjectList(base.BaseObjectWrapper):
+
+    _attrs = ['projects', 'preemptible_projects']
 
     def __init__(self):
-        self.client = client.PlacementClient()
-
-    @property
-    def resource_providers(self):
-        rps = self.client.resource_providers()
-        return [rp_obj.ResourceProvider(rp['uuid']) for rp in rps]
-
-    @property
-    def resource_classes(self):
-        return (rc['name'] for rc in self.client.resource_classes())
-
-    @property
-    def traits(self):
-        return (trait for trait in self.client.traits())
+        super(ProjectList, self).__init__()
