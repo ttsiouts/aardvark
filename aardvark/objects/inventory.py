@@ -20,26 +20,37 @@ CONF = aardvark.conf.CONF
 
 class Inventory(object):
 
-    _attrs = ['allocation_ratio', 'used', 'reserved', 'max_unit', 'step_size',
-              'min_unit', 'total']
+    _attrs = ['used', 'max_unit', 'step_size', 'min_unit', 'total']
 
     def __init__(self, resource_class, **kwargs):
         self.resource_class = resource_class
+
+        import pdb; pdb.set_trace()
+        allocation_ratio = kwargs['allocation_ratio']
+        reserved = kwargs['reserved']
+
         for attr in self._attrs:
             try:
+                if attr == 'total':
+                    total = float(kwargs[attr]) * allocation_ratio - reserved
+                    setattr(self, attr, total)
+                    continue
                 setattr(self, attr, float(kwargs[attr]))
             except KeyError:
                 setattr(self, attr, 0.0)
 
+        # This is going to be used just to reserve resources while scheduling
+        # multiple VMs.
+        self.reserved = 0
+
     @property
     def free(self):
-        return self.total - (self.reserved + self.used)
+        return self.total - self.used
 
     @property
     def usage(self):
-        # NOTE(ttsiouts): multiply with 100 to avoid float for start...
         if self.total:
-            return (self.reserved + self.used)*100/ self.total
+            return self.used * 100 / self.total
         return 0
 
     @property

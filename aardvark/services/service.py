@@ -66,7 +66,7 @@ class SystemStateCalculatorManager(periodic_task.PeriodicTasks):
     def __init__(self):
         super(SystemStateCalculatorManager, self).__init__(CONF)
         self.system = system.System()
-        self.reaper = reaper.Reaper()
+        self.reaper = reaper.Reaper(watermark_mode=True)
 
     def periodic_tasks(self, context, raise_on_error=False):
         return self.run_periodic_tasks(context, raise_on_error=raise_on_error)
@@ -75,18 +75,18 @@ class SystemStateCalculatorManager(periodic_task.PeriodicTasks):
                                  run_immediately=True)
     def calculate_system_state(self, context, startup=True):
 
-        LOG.info('periodic Task timer expired')
-        system_usage = self.system.usage()
+        LOG.debug('periodic Task timer expired')
+        system_state = self.system.system_state()
 
-        if system_usage > CONF.aardvark.watermark:
-            LOG.info("Over limit")
-            resource_request = system_usage.get_excessive_resources()
+        LOG.info("Calculated System usage: %s", system_state.usage())
+        if system_state.usage() > CONF.aardvark.watermark:
+            LOG.info("Over limit, system usage = %s" % system_state.usage()) 
+            resource_request = system_state.get_excessive_resources(CONF.aardvark.watermark)
 
-            # Devide the resource request with the number of Resource
-            # Providers and request for more slots
-            number_rps = len(self.system.resource_providers)
-            self.reaper.handle_request(resource_request/number_rps,
-                                       self.system, slots=number_rps)
+            ## Devide the resource request with the number of Resource
+            ## Providers and request for more slots
+            #number_rps = len(self.system.resource_providers)
+            self.reaper.handle_request(resource_request, self.system)
         # Remove the cached info, to reload from the backend on the
         # next periodic run
         self.system.empty_cache()

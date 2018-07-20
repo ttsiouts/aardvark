@@ -16,6 +16,8 @@
 from aardvark.objects import base
 from aardvark.objects import resource_provider
 from aardvark.objects import project
+from aardvark.objects import resources
+from aardvark.objects import capabilities
 
 class System(object):
 
@@ -35,15 +37,15 @@ class System(object):
     def preemptible_projects(self):
         return self._project_list.preemptible_projects
 
-    def usage(self):
-        total_cap = None
+    def system_state(self):
+        total_resources = resources.Resources()
+        used_resources = resources.Resources()
         for rp in self.resource_providers:
-            if total_cap is None:
-                total_cap = rp.capabilities
-            else:
-                total_cap += rp.capabilities
+            total_resources += rp.total_resources
+            used_resources += rp.used_resources
             rp.reinit_object()
-        return total_cap
+
+        return capabilities.Capabilities(used_resources, total_resources)
 
     def empty_cache(self):
         self._rp_list.reinit_object()

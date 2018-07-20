@@ -15,8 +15,8 @@
 
 from aardvark.api.rest import placement as client
 from aardvark.objects import capabilities
-from aardvark.objects import inventory
 from aardvark.objects import resource_provider as rp_obj
+from aardvark.objects import resources
 
 
 class ResourceProvider(object):
@@ -28,7 +28,8 @@ class ResourceProvider(object):
 
     @property
     def usages(self):
-        return self.client.usages(self.uuid)
+        usages = self.client.usages(self.uuid)
+        return resources.Resources(usages)
 
     @property
     def all_usages(self):
@@ -36,7 +37,8 @@ class ResourceProvider(object):
 
     @property
     def inventories(self):
-        return self.client.inventories(self.uuid)
+        inventories = self.client.inventories(self.uuid)
+        return resources.Resources.obj_from_inventories(inventories)
 
     @property
     def resource_classes(self):
@@ -44,8 +46,7 @@ class ResourceProvider(object):
 
     @property
     def capabilities(self):
-        return capabilities.Capabilities.obj_from_primitive(
-            self.inventories, self.usages)
+        return capabilities.Capabilities(self.usages, self.inventories)
 
 
 class ResourceProviderList(object):

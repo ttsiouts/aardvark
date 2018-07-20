@@ -25,10 +25,17 @@ LOG = logging.getLogger(__name__)
 CONF = aardvark.conf.CONF
 
 
+def host_potential(host, resources, include_free):
+    if include_free:
+        return host.free_resources + resources
+    return resources
+
+
 class ChanceDriver(driver.ReaperDriver):
 
-    def __init__(self):
+    def __init__(self, watermark_mode=False):
         super(ChanceDriver, self).__init__()
+        self.watermark_mode = watermark_mode
 
     def get_preemptible_servers(self, requested, hosts, num_instances):
         """Implements the strategy of freeing up the requested resources.
@@ -68,12 +75,13 @@ class ChanceDriver(driver.ReaperDriver):
         # number of the requested instances.
         spots = 0
         for host in selected_hosts:
-            spots += host.free_resources / requested
+            resources = host_potential(
+               host, host.reserved_resources, not self.watermark_mode)
+            spots += resources_obj.Resources.min_ratio(resources, requested)
 
         if spots < num_instances:
             selected_servers = list()
 
-        print selected_hosts, selected_servers
         return selected_hosts, selected_servers
 
     def choose_host(self, hosts, requested):
@@ -88,11 +96,13 @@ class ChanceDriver(driver.ReaperDriver):
                           class representing the requested resources
         """
         valid_hosts = list()
-        for rp in hosts:
-            if rp.preemptible_resources + rp.free_resources >= requested:
+        for host in hosts:
+            resources = host_potential(
+                host, host.preemptible_resources, not self.watermark_mode)
+            if resources >= requested:
                 # Create a list with the hosts that can potentially provide
                 # the requested resources.
-                valid_hosts.append(rp)
+                valid_hosts.append(host)
 
         if not valid_hosts:
             return None
@@ -116,7 +126,9 @@ class ChanceDriver(driver.ReaperDriver):
         selected = list()
         resources = resources_obj.Resources()
         # If the already available are enough, just return an empty list
-        if host.free_resources >= requested:
+        host_resources = host_potential(
+            host, resources, not self.watermark_mode)
+        if host_resources >= requested:
             return selected
 
         # Shuffle the servers
@@ -135,7 +147,10 @@ class ChanceDriver(driver.ReaperDriver):
             selected.append(server)
             resources += server.resources
 
-            if resources + host.free_resources >= requested:
+            host_resources = host_potential(
+                host, resources, not self.watermark_mode)
+
+            if host_resources >= requested:
                 # This is the point we want to reach. It means that requested
                 # resources will be available after the culling selected
                 # servers.
@@ -150,7 +165,7 @@ class ChanceDriver(driver.ReaperDriver):
         # spots for the alternatives functionality
 
         if len(selected) > 0:
-            host.reserve_resources(requested - resources)
+            host.reserve_resources(resources, requested)
             host.preemptible_servers = [
                 server for server in host.preemptible_servers 
                 if server not in selected]

@@ -21,13 +21,23 @@ SERVICE_TYPE = 'compute'
 
 compute_group = cfg.OptGroup(
     'compute',
-    title='Keystone Service Options',
-    help="Configuration options for connecting to the keystone API service"
+    title='Compute Service Options',
+    help="Configuration options for connecting to the Nova API service"
 )
+
+compute_opts = [
+    cfg.StrOpt("client_version",
+        default="2.61",
+        help="""
+Selects where the API microversion requested by the novaclient.
+"""
+    ),
+]
 
 def register_opts(conf):
 
     conf.register_group(compute_group)
+    conf.register_opts(compute_opts, group=compute_group)
 
     group = getattr(compute_group, 'name', compute_group)
 

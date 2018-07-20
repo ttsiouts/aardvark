@@ -25,6 +25,7 @@ from aardvark.objects import instance
 import aardvark.conf
 
 import collections
+import time
 
 CONF = aardvark.conf.CONF
 LOG = logging.getLogger(__name__)
@@ -35,14 +36,17 @@ class Reaper(object):
 
     This class decides which preemptible servers have to be terminated.
     """
-    def __init__(self):
+    def __init__(self, watermark_mode=False):
+        self.watermark_mode = watermark_mode
+        invoke_args = tuple([self.watermark_mode])
         # Load the configured driver
         self.driver = driver.DriverManager(
                 "aardvark.reaper.driver",
                 CONF.reaper.reaper_driver,
-                invoke_on_load=True).driver
-         # Load configured notification system in order to notify
-         # the owner of the server that will be terminated
+                invoke_on_load=True,
+                invoke_args=invoke_args).driver
+        # Load configured notification system in order to notify
+        # the owner of the server that will be terminated
 
     def handle_request(self, request, system, slots=1):
         """Main functionality of the Reaper
@@ -52,7 +56,6 @@ class Reaper(object):
         :param req_spec: the request specification for the spawning server
         :param resources: the requested resources
         """
-        print request
         instance_list = instance.InstanceList()
         for rp in system.resource_providers:
             servers = list()
@@ -73,6 +76,8 @@ class Reaper(object):
             LOG.info("Deleting server: %s" % server.name)
             self.notify_about_instance(server)
             instance_list.delete_instance(server)
+        # Wait until allocations are removed
+        time.sleep(5)
 
     def notify_about_instance(self, instance):
         # notify with the configured notification system before deleting

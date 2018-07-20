@@ -31,7 +31,8 @@ def rebuild_server(server_uuid):
     pass
 
 def novaclient():
-    auth_plugin = keystone_loading.load_auth_from_conf_options(CONF, 'compute')
-    session = keystone_loading.load_session_from_conf_options(CONF, 'compute',
-                                                              auth=auth_plugin)
-    return client.Client('2.50', session=session)
+    auth_plugin = keystone_loading.load_auth_from_conf_options(CONF,
+                                                               'compute')
+    session = keystone_loading.load_session_from_conf_options(
+        CONF, 'compute', auth=auth_plugin)
+    return client.Client(CONF.compute.client_version, session=session)

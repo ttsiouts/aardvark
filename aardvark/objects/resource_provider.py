@@ -26,8 +26,6 @@ class ResourceProvider(base.PlacementObjectWrapper):
         self.uuid = uuid
         self.name = name
         self._preemptible_servers = list()
-        self._free_resources = None
-        self._reserved_resources = resources.Resources()
 
     @property
     def preemptible_servers(self):
@@ -45,13 +43,28 @@ class ResourceProvider(base.PlacementObjectWrapper):
         return preempt
 
     @property
+    def total_resources(self):
+        return self.capabilities.total
+
+    @property
+    def used_resources(self):
+        return self.capabilities.used
+
+    @property
+    def reserved_resources(self):
+        return self.capabilities.reserved
+
+    @property
     def free_resources(self):
         return self.capabilities.free_resources
 
-    def reserve_resources(self, new):
-        # WRONG!
-        self.capabilities += capabilities.Capabilities.obj_from_resources(new)
-
+    def reserve_resources(self, resources, requested):
+        if resources > requested:
+            self.capabilities.used -= resources - requested
+        else:
+            self.capabilities.used += requested - resources
+        self.capabilities.reserved += requested
+        
     def __eq__(self, other):
         return self.uuid == other.uuid
 

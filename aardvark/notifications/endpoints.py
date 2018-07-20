@@ -22,13 +22,14 @@ from aardvark.api.rest import nova
 
 class SchedulingEndpoint(base.NotificationEndpoint):
 
-    event_types = ['select_destinations']
+    event_types = ['instance.schedule']
 
     def __init__(self):
         super(SchedulingEndpoint, self).__init__()
 
     def error(self, ctxt, publisher_id, event_type, payload, metadata):
         print "Error in Scheduling"
+        print payload
         # Add the info in a global dict with the uuid as a key
 
 
@@ -40,8 +41,8 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
         super(StateUpdateEndpoint, self).__init__()
 
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
-        if payload['nova_object.data']['state_update']['nova_object.data']['state'] == 'error' and \
-           payload['nova_object.data']['state_update']['nova_object.data']['old_state'] == 'active':
+        if payload['nova_object.data']['state_update']['nova_object.data']['state'] == 'pending' and \
+           payload['nova_object.data']['state_update']['nova_object.data']['old_state'] == 'building':
 
             print "went to pending"
             flavor = payload['nova_object.data']['flavor']['nova_object.data']
@@ -56,5 +57,5 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
         request = resources_obj.Resources.obj_from_payload(flavor)
         reaper.handle_request(request, system)
         novaclient = nova.novaclient()
+        print "rebuilding server with uuid: %s" % uuid
         novaclient.servers.rebuild(uuid, image)
-        #print server

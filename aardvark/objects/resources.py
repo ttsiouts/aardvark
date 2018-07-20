@@ -38,6 +38,16 @@ class Resources(object):
             self.resources = self.resources | set([resource])
 
     @staticmethod
+    def obj_from_inventories(inventories):
+        resources = {}
+        for rc, inventory in inventories.items():
+            allocation_ratio = inventory['allocation_ratio']
+            reserved = inventory['reserved']
+            total = inventory['total'] * allocation_ratio - reserved
+            resources[rc] = total
+        return Resources(resources)
+
+    @staticmethod
     def obj_from_flavor(flavor):
         vcpus = flavor['vcpus']
         disk = flavor['ephemeral'] + flavor['disk'] + flavor['swap']
@@ -71,6 +81,16 @@ class Resources(object):
 
         return Resources(resources)
 
+    @staticmethod
+    def max_ratio(one, two):
+        res = one/two
+        return max([ratio for ratio in res.values()])
+
+    @staticmethod
+    def min_ratio(one, two):
+        res = one/two
+        return min([ratio for ratio in res.values()])
+
     def __add__(self, other):
         resources = self.resources | other.resources
         new = dict()
@@ -96,23 +116,6 @@ class Resources(object):
                 return None
         return Resources(new)
 
-    def __truediv__(self, other):
-        # NOTE(ttsiouts): the result of this operation is the minimum result
-        # after dividing all the resource classes:
-        # e.g. a = {vcpu: 100, memory: 1024}, b = {vcpu: 1, memory: 512}
-        #      a / b = 2 (because a.memory / b.memory = 2)
-        result = -1
-        for resource in other.resources:
-            if getattr(self, resource, 0) < getattr(other, resource, 0):
-                res = 0
-            else:
-                # NOTE: Careful with the default values of getattr!
-                # division with zero :P
-                res = getattr(self, resource, 0) / getattr(other, resource, 1)
-            if result == -1 or res < result:
-                result = res
-        return int(result)
-
     def __div__(self, other):
         if isinstance(other, Resources):
             return self._div_with_resource(other)
@@ -126,18 +129,21 @@ class Resources(object):
         # after dividing all the resource classes:
         # e.g. a = {vcpu: 100, memory: 1024}, b = {vcpu: 1, memory: 512}
         #      a / b = 2 (because a.memory / b.memory = 2)
-        result = -1
-        for resource in other.resources:
-            if getattr(self, resource, 0) < getattr(other, resource, 0):
-                res = 0
-            else:
-                # NOTE: Careful with the default values of getattr!
-                # division with zero :P
-                ot = getattr(other, resource, 1) or 1
-                res = getattr(self, resource, 0) / ot
-            if result == -1 or res < result:
-                result = res
-        return int(result)
+        resources = self.resources | other.resources
+        return {rc: getattr(self, rc, 0) / getattr(other, rc, 1)
+                for rc in resources}
+
+        #for resource in other.resources:
+        #    if getattr(self, resource, 0) < getattr(other, resource, 0):
+        #        res = 0
+        #    else:
+        #        # NOTE: Careful with the default values of getattr!
+        #        # division with zero :P
+        #        ot = getattr(other, resource, 1) or 1
+        #        res = getattr(self, resource, 0) / ot
+        #    if result == -1 or res < result:
+        #        result = res
+        #return int(result)
 
     def _div_with_int(self, other):
         resources = {}
@@ -181,6 +187,8 @@ class Resources(object):
         for res in self.resources:
             resp = resp and getattr(self, res) <= getattr(other, res, 0)
         return resp
+
+    __truediv__ = __div__
 
     def __repr__(self):
         text = ', '.join(['%s: %s' % (res, getattr(self, res))
