@@ -14,10 +14,16 @@
 #    under the License.
 
 from aardvark.notifications import base
+from aardvark import exception
 from aardvark.objects import resources as resources_obj
 from aardvark.objects import system as system_obj
 from aardvark.reaper import reaper as reaper_obj
 from aardvark.api.rest import nova
+
+from oslo_log import log as logging
+
+
+LOG = logging.getLogger(__name__)
 
 
 class SchedulingEndpoint(base.NotificationEndpoint):
@@ -39,12 +45,12 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
 
     def __init__(self):
         super(StateUpdateEndpoint, self).__init__()
+        self.novaclient = nova.novaclient()
 
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
         if payload['nova_object.data']['state_update']['nova_object.data']['state'] == 'pending' and \
            payload['nova_object.data']['state_update']['nova_object.data']['old_state'] == 'building':
 
-            print "went to pending"
             flavor = payload['nova_object.data']['flavor']['nova_object.data']
             uuid = payload['nova_object.data']['uuid']
             image = payload['nova_object.data']['image_uuid']
@@ -55,7 +61,11 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
         system = system_obj.System()
         
         request = resources_obj.Resources.obj_from_payload(flavor)
-        reaper.handle_request(request, system)
-        novaclient = nova.novaclient()
-        print "rebuilding server with uuid: %s" % uuid
-        novaclient.servers.rebuild(uuid, image)
+        try:
+            reaper.handle_request(request, system)
+            print "rebuilding server with uuid: %s" % uuid
+            self.novaclient.servers.rebuild(uuid, image)
+        except exception.ReaperException as e:
+            LOG.error(e.message)
+            LOG.info('Resetting server %s to error', uuid)
+            self.novaclient.servers.reset_state(uuid)

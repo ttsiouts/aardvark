@@ -14,6 +14,8 @@
 #    under the License.
 
 import aardvark.conf
+
+from aardvark import exception
 from aardvark.reaper import driver
 from aardvark.objects import resources as resources_obj
 
@@ -25,17 +27,10 @@ LOG = logging.getLogger(__name__)
 CONF = aardvark.conf.CONF
 
 
-def host_potential(host, resources, include_free):
-    if include_free:
-        return host.free_resources + resources
-    return resources
-
-
 class ChanceDriver(driver.ReaperDriver):
 
     def __init__(self, watermark_mode=False):
-        super(ChanceDriver, self).__init__()
-        self.watermark_mode = watermark_mode
+        super(ChanceDriver, self).__init__(watermark_mode)
 
     def get_preemptible_servers(self, requested, hosts, num_instances):
         """Implements the strategy of freeing up the requested resources.
@@ -44,7 +39,6 @@ class ChanceDriver(driver.ReaperDriver):
                          requested resources
         :param resources: (Why is this here?)
         """
-        # Create the host mapping
         selected_servers = list()
         selected_hosts = list()
 
@@ -69,23 +63,16 @@ class ChanceDriver(driver.ReaperDriver):
 
             selected_servers += servers
 
-        # NOTE: If we run out of hosts before the max retries, we need
-        # to check if we have enough spots reserved. If not, we won't
-        # kill any servers. The least number of reserved spots is the
-        # number of the requested instances.
-        spots = 0
-        for host in selected_hosts:
-            resources = host_potential(
-               host, host.reserved_resources, not self.watermark_mode)
-            spots += resources_obj.Resources.min_ratio(resources, requested)
-
-        if spots < num_instances:
-            selected_servers = list()
+        if not self.watermark_mode:
+            # Watermark mode is best effort. So skip this check in this
+            # mode. On the other hand if we are not in watermark mode we
+            # free space only if we can find the requested space.
+            self.check_spots(selected_hosts, requested, num_instances)
 
         return selected_hosts, selected_servers
 
     def choose_host(self, hosts, requested):
-        """Randomly selection of the host.
+        """Random selection of the host.
 
         Finds the hosts that can provide the requested resources and randomly
         selects one of them.
@@ -97,7 +84,7 @@ class ChanceDriver(driver.ReaperDriver):
         """
         valid_hosts = list()
         for host in hosts:
-            resources = host_potential(
+            resources = driver.host_potential(
                 host, host.preemptible_resources, not self.watermark_mode)
             if resources >= requested:
                 # Create a list with the hosts that can potentially provide
@@ -126,7 +113,7 @@ class ChanceDriver(driver.ReaperDriver):
         selected = list()
         resources = resources_obj.Resources()
         # If the already available are enough, just return an empty list
-        host_resources = host_potential(
+        host_resources = driver.host_potential(
             host, resources, not self.watermark_mode)
         if host_resources >= requested:
             return selected
@@ -147,7 +134,7 @@ class ChanceDriver(driver.ReaperDriver):
             selected.append(server)
             resources += server.resources
 
-            host_resources = host_potential(
+            host_resources = driver.host_potential(
                 host, resources, not self.watermark_mode)
 
             if host_resources >= requested:

@@ -18,6 +18,7 @@ from stevedore import driver
 
 from oslo_log import log as logging
 
+from aardvark import exception
 from aardvark.api.rest import nova
 from aardvark.objects import project
 from aardvark.objects import instance
@@ -72,10 +73,12 @@ class Reaper(object):
             self.driver.get_preemptible_servers(request,
                                                 system.resource_providers,
                                                 slots)
+
         for server in selected_servers:
             LOG.info("Deleting server: %s" % server.name)
             self.notify_about_instance(server)
             instance_list.delete_instance(server)
+
         # Wait until allocations are removed
         time.sleep(5)
 
