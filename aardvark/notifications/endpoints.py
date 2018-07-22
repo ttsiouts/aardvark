@@ -13,7 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from functools import wraps
+
 from aardvark.notifications import base
+from aardvark.notifications import events
 from aardvark import exception
 from aardvark.objects import resources as resources_obj
 from aardvark.objects import system as system_obj
@@ -25,6 +28,23 @@ from oslo_log import log as logging
 
 LOG = logging.getLogger(__name__)
 
+# This has to be heavily guarded! New object and use lockutils to be sure
+instance_map = {}
+
+
+def retries(fn):
+    # This should moved to utils
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        retries = 0
+        while retries < 3:
+            try:
+                return fn(*args, **kwargs)
+            except exception.RetryException:
+                retries += 1
+        LOG.error('Retries exceeded!')
+    return wrapper
+
 
 class SchedulingEndpoint(base.NotificationEndpoint):
 
@@ -34,9 +54,10 @@ class SchedulingEndpoint(base.NotificationEndpoint):
         super(SchedulingEndpoint, self).__init__()
 
     def error(self, ctxt, publisher_id, event_type, payload, metadata):
-        print "Error in Scheduling"
-        print payload
-        # Add the info in a global dict with the uuid as a key
+        # Add the info in a dict with the uuid as a key
+        event = events.SchedulingEvent(payload)
+        for uuid in event.instance_uuids:
+            instance_map[uuid] = event
 
 
 class StateUpdateEndpoint(base.NotificationEndpoint):
@@ -46,26 +67,44 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
     def __init__(self):
         super(StateUpdateEndpoint, self).__init__()
         self.novaclient = nova.novaclient()
+        self.reaper = reaper_obj.Reaper()
+        self.system = system_obj.System()
 
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
-        if payload['nova_object.data']['state_update']['nova_object.data']['state'] == 'pending' and \
-           payload['nova_object.data']['state_update']['nova_object.data']['old_state'] == 'building':
+        event = events.InstanceUpdateEvent(payload)
+        if event.old_state == 'building' and event.new_state == 'pending':
+            self.trigger_reaper(
+               event.instance_uuid, event.flavor, event.image)
+        else:
+            # Pop instance info from the instance_map
+            uuid = instance_map.pop(event.instance_uuid, None)
+            if uuid:
+                LOG.debug("Removed instance %s from instance map", uuid)
 
-            flavor = payload['nova_object.data']['flavor']['nova_object.data']
-            uuid = payload['nova_object.data']['uuid']
-            image = payload['nova_object.data']['image_uuid']
-            self.trigger_reaper(uuid, flavor, image)
-
+    @retries
     def trigger_reaper(self, uuid, flavor, image):
-        reaper = reaper_obj.Reaper()
-        system = system_obj.System()
         
+        # Enrich the request with info from the instance_map
         request = resources_obj.Resources.obj_from_payload(flavor)
         try:
-            reaper.handle_request(request, system)
-            print "rebuilding server with uuid: %s" % uuid
+            info = instance_map.pop(uuid, None)
+        except KeyError:
+            # Maybe there is a race. Raising RetryException to rerty
+            raise exception.RetryException()
+
+        LOG.info('Retreived info from instance_map: %s', info)
+        print instance_map
+
+        try:
+            self.reaper.handle_request(request, self.system)
+            LOG.info("rebuilding server with uuid: %s", uuid)
             self.novaclient.servers.rebuild(uuid, image)
         except exception.ReaperException as e:
             LOG.error(e.message)
             LOG.info('Resetting server %s to error', uuid)
             self.novaclient.servers.reset_state(uuid)
+
+        # Cached system information is going to be used inside the Reaper.
+        # Empty the cache here so they are going to be fetched again on the
+        # next run.
+        self.system.empty_cache()

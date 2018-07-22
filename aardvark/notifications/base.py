@@ -44,3 +44,14 @@ class NotificationEndpoint(object):
     info = _default_action
     sample = _default_action
     warn = _default_action
+
+
+class NotificationEvent(object):
+   """Base Notification event
+
+   The notification payload is cast into this event as soon as the
+   notification is received
+   """
+
+   def __init__(self, payload):
+       self.payload = payload

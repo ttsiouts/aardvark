@@ -19,7 +19,7 @@ from oslo_log import log as logging
 LOG = logging.getLogger(__name__)
 
 
-class ReaperException(Exception):
+class AardvarkException(Exception):
     """Base Reaper Exception"""
 
     message = "Unknown error occurred during Reaper's execution"
@@ -27,8 +27,16 @@ class ReaperException(Exception):
     def __init__(self, message=None):
         if message:
             self.message = message
+        super(AardvarkException, self).__init__(message)
 
-        super(ReaperException, self).__init__(message)
+class RetryException(AardvarkException):
+    """Generic Exception for the retries mechanism"""
+    message=''
+
+
+class ReaperException(AardvarkException):
+    """Base Reaper Exception"""
+    message = "Unknown error occurred during Reaper's execution"
 
 
 class NotEnoughResources(ReaperException):
