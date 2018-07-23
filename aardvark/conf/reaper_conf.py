@@ -57,6 +57,19 @@ The number of alternative slots that the the reaper will try to free up for
 each requested slot.
 """
     ),
+    cfg.MultiStrOpt('cell_aggregates',
+               default=[],
+               help="""
+The list of aggregates that the reaper will try to make space to
+
+Each element of the list can be an aggregate or a combination of aggregates.
+For each element in the list, a reaper thread will be spawned and the request
+will be forwarded to the responsible worker.
+
+If the provided list is empty, only one worker will be spawned, responsible for
+the whole system.
+"""
+    ),
 ]
 
 
