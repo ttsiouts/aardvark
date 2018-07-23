@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import collections
 import itertools
 from oslo_log import log as logging
 import random

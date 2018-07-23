@@ -25,7 +25,6 @@ from aardvark.objects import instance
 
 import aardvark.conf
 
-import collections
 import time
 
 CONF = aardvark.conf.CONF
@@ -49,7 +48,7 @@ class Reaper(object):
         # Load configured notification system in order to notify
         # the owner of the server that will be terminated
 
-    def handle_request(self, request, system, slots=1):
+    def handle_request(self, request, system, project_id=None, slots=1):
         """Main functionality of the Reaper
 
         Gathers info and tries to free up the requested resources.
@@ -57,6 +56,16 @@ class Reaper(object):
         :param req_spec: the request specification for the spawning server
         :param resources: the requested resources
         """
+
+        if not self.watermark_mode:
+            pre_projects = [
+                project.id_ for project in system.preemptible_projects
+            ]
+            if project_id in pre_projects:
+                # Try to make space only if the requesting project is
+                # non-preemptible.
+                raise exception.PreemptibleRequest()
+
         instance_list = instance.InstanceList()
         for rp in system.resource_providers:
             servers = list()

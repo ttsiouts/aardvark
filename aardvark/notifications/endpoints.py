@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
 from functools import wraps
 
 from aardvark.notifications import base
@@ -69,6 +70,8 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
         self.novaclient = nova.novaclient()
         self.reaper = reaper_obj.Reaper()
         self.system = system_obj.System()
+        # Use this dict to bundle up the scheduling events
+        self.bundled_reqs = collections.defaultdict(list)
 
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
         event = events.InstanceUpdateEvent(payload)
@@ -76,7 +79,8 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
             self.trigger_reaper(
                event.instance_uuid, event.flavor, event.image)
         else:
-            # Pop instance info from the instance_map
+            # Pop instance info from the instance_map in case this is about
+            # another state transition.
             uuid = instance_map.pop(event.instance_uuid, None)
             if uuid:
                 LOG.debug("Removed instance %s from instance map", uuid)
@@ -87,24 +91,45 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
         # Enrich the request with info from the instance_map
         request = resources_obj.Resources.obj_from_payload(flavor)
         try:
-            info = instance_map.pop(uuid, None)
+            # No default value in order to retry
+            info = instance_map.pop(uuid)
         except KeyError:
             # Maybe there is a race. Raising RetryException to rerty
             raise exception.RetryException()
 
-        LOG.info('Retreived info from instance_map: %s', info)
-        print instance_map
+        uuids = info.instance_uuids
+        request_id = info.request_id
+
+        if info.multiple_instances:
+            self.bundled_reqs[info.request_id]  += [uuid]
+            if len(info.instance_uuids) != len(self.bundled_reqs[request_id]):
+                # Wait until the last instance for this request is set to the
+                # Pending state, bundle the requests and trigger the reaper.
+                LOG.info('Bundling up requests for multiple instances.')
+                return
+            # Remove the bundled requests after all instance update
+            # notifications are received
+            del self.bundled_reqs[request_id]
 
         try:
-            self.reaper.handle_request(request, self.system)
-            LOG.info("rebuilding server with uuid: %s", uuid)
-            self.novaclient.servers.rebuild(uuid, image)
+            self.reaper.handle_request(request, self.system, info.project_id,
+                                       len(uuids))
+            self._rebuild_instances(uuids, image)
         except exception.ReaperException as e:
             LOG.error(e.message)
-            LOG.info('Resetting server %s to error', uuid)
-            self.novaclient.servers.reset_state(uuid)
+            self._reset_instances(uuids)
 
         # Cached system information is going to be used inside the Reaper.
         # Empty the cache here so they are going to be fetched again on the
         # next run.
         self.system.empty_cache()
+
+    def _rebuild_instances(self, uuids, image):
+        for uuid in uuids:
+            LOG.info("Rebuilding server with uuid: %s", uuid)
+            self.novaclient.servers.rebuild(uuid, image)
+
+    def _reset_instances(self, uuids):
+        for uuid in uuids:
+            LOG.info('Resetting server %s to error', uuid)
+            self.novaclient.servers.reset_state(uuid)

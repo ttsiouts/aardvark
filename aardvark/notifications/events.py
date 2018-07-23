@@ -32,7 +32,15 @@ class SchedulingEvent(base.NotificationEvent):
 
     @property
     def multiple_instances(self):
-        return len(self.instance_uuids) > 0
+        return len(self.instance_uuids) > 1
+
+    @property
+    def request_id(self):
+        return self.request_spec['nova_object.data']['id']
+
+    @property
+    def project_id(self):
+        return self.request_spec['nova_object.data']['project_id']
 
 
 class InstanceUpdateEvent(base.NotificationEvent):
