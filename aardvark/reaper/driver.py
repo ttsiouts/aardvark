@@ -20,6 +20,7 @@ import time
 from functools import wraps
 
 from oslo_log import log as logging
+from aardvark.objects import resources as resources_obj
 from aardvark import exception
 
 LOG = logging.getLogger(__name__)
