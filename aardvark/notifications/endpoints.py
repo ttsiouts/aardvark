@@ -24,13 +24,32 @@ from aardvark.objects import system as system_obj
 from aardvark.reaper import reaper as reaper_obj
 from aardvark.api.rest import nova
 
+from oslo_concurrency import lockutils
 from oslo_log import log as logging
 
 
 LOG = logging.getLogger(__name__)
 
-# This has to be heavily guarded! New object and use lockutils to be sure
-instance_map = {}
+
+class SyncedInstanceMap(dict):
+    """The internal instance to scheduling info
+
+    Try to create a threadsafe dictionary by locking the methods needed.
+    """
+    @lockutils.synchronized('reaper_lock')
+    def __setitem__(self, key, item):
+        super(SyncedInstanceMap, self).__setitem__(key, item)
+
+    @lockutils.synchronized('reaper_lock')
+    def __getitem__(self, key):
+        return super(SyncedInstanceMap, self).__getitem__(key)
+
+    @lockutils.synchronized('reaper_lock')
+    def __delitem__(self, key):
+        super(SyncedInstanceMap, self).__delitem__(key)
+
+
+instance_map = SyncedInstanceMap()
 
 
 def retries(fn):
@@ -104,7 +123,8 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
             self.bundled_reqs[info.request_id]  += [uuid]
             if len(info.instance_uuids) != len(self.bundled_reqs[request_id]):
                 # Wait until the last instance for this request is set to the
-                # Pending state, bundle the requests and trigger the reaper.
+                # Pending state, bundle the requests and trigger the reaper
+                # once for all of them.
                 LOG.info('Bundling up requests for multiple instances.')
                 return
             # Remove the bundled requests after all instance update
