@@ -15,6 +15,14 @@
 
 from functools import wraps
 from oslo_concurrency import lockutils
+from oslo_log import log
+
+import aardvark.conf
+from aardvark.api.rest import nova
+
+
+LOG = log.getLogger(__name__)
+CONF = aardvark.conf.CONF
 
 
 def retries(fn):
@@ -26,7 +34,7 @@ def retries(fn):
                 return fn(*args, **kwargs)
             except exception.RetryException:
                 retries += 1
-        LOG.error('Retries exceeded!')
+        LOG.error('Execution of %s failed: Retries exceeded!', fn.__name__)
     return wrapper
 
 
@@ -44,3 +52,16 @@ class SafeDict(dict):
     @lockutils.synchronized('reaper_lock')
     def __delitem__(self, key):
         super(SafeDict, self).__delitem__(key)
+
+
+def map_aggregate_names():
+    """Maps aggregate names to uuids"""
+    novaclient = nova.novaclient()
+    aggregate_map = {
+        agg.name: agg.uuid for agg in novaclient.aggregates.list()
+    }
+    uuids = []
+    for aggregates in CONF.reaper.watched_aggregates:
+        aggregates = aggregates.split('|')
+        uuids.append([aggregate_map[agg.strip()] for agg in aggregates])
+    return uuids

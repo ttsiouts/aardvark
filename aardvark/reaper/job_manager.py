@@ -14,22 +14,15 @@
 #    under the License.
 
 
-import six
-
 from aardvark import exception
-from aardvark.reaper import reaper
-from aardvark.api.rest import nova
+from aardvark import utils
 import aardvark.conf
 
 from oslo_log import log as logging
 from taskflow.jobs import backends
-from taskflow.utils import threading_utils
-import time
 
 
 LOG = logging.getLogger(__name__)
-
-
 CONF = aardvark.conf.CONF
 
 
@@ -44,60 +37,18 @@ class JobManager(object):
     board_name = "ReaperBoard"
 
     def __init__(self):
-        if six.PY3:
-            # TODO(ttsiouts): Hack to make eventlet work right, remove when the
-            # following is fixed: https://github.com/eventlet/eventlet/issues/230
-            from taskflow.utils import eventlet_utils as _eu  # noqa
-            try:
-                import eventlet as _eventlet  # noqa
-            except ImportError:
-                pass
         self.watched_aggregates = []
-        self.reaper_instances = []
-        self._setup_workers(self._aggregates())
+        for aggregates in utils.map_aggregate_names():
+            if not isinstance(aggregates, list):
+                aggregates = [aggregates]
+            self.watched_aggregates += aggregates
+
         # HACK: if a request is received without excplicitly defined
         # aggregates, then any of the workers can pick it up. For this
         # reason, we make sure, that [] is always included in the list of
         # watched aggregates.
         if [] not in self.watched_aggregates:
             self.watched_aggregates.append([])
-
-    def _aggregates(self):
-        """Maps aggregate names to uuids"""
-        novaclient = nova.novaclient()
-        aggregate_map = {
-            agg.name: agg.uuid for agg in novaclient.aggregates.list()
-        }
-        uuids = []
-        for aggregates in CONF.reaper.watched_aggregates:
-            aggregates = aggregates.split('|')
-            uuids.append([aggregate_map[agg.strip()] for agg in aggregates])
-        return uuids
-
-    def _setup_workers(self, watched_aggregates):
-        if len(watched_aggregates) == 0:
-            LOG.debug('One worker for all infrastructure will be started')
-            watched_aggregates = [watched_aggregates]
-
-        for aggregates in watched_aggregates:
-            if not isinstance(aggregates, list):
-                aggregates = [aggregates]
-            instance = reaper.Reaper(aggregates)
-            instance.worker = threading_utils.daemon_thread(instance.job_handler)
-            self.reaper_instances.append(instance)
-            #self.watched_aggregates.append(aggregates)
-            self.watched_aggregates += aggregates
-
-    def start_workers(self):
-        LOG.info('Starting workers')
-        for instance in self.reaper_instances:
-            instance.worker.start()
-
-    def stop_workers(self):
-        LOG.info('Stoping workers')
-        for instance in self.reaper_instances:
-            instance.stop_handling()
-            instance.worker.join()
 
     def post_job(self, details):
         # Make sure that the forwarded requests are for watched

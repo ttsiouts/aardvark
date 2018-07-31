@@ -133,13 +133,12 @@ class Reaper(object):
                         self.take_action(request)
                         board.consume(job, "worker")
                         LOG.debug("Consumed %s", job)
-
         LOG.info("Reaper worker stopped: %s", self.aggregates)
 
     def take_action(self, request):
         # If we receive a request without explicit aggregates
         # set the aggregates of the request to self.aggregates
-        # so that we avoid invalidating the system state of
+        # so that we don't invalidate the system state of
         # other worker threads by altering the state of resource
         # providers originally not watched by this thread.
         if request.aggregates == []:

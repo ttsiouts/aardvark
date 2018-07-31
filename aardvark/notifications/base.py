@@ -31,9 +31,6 @@ class NotificationEndpoint(object):
             self.filter_rule = oslo_messaging.NotificationFilter(
                 event_type='|'.join(self.event_types))
 
-    def stop(self):
-        pass
-
     def _default_action(self, *args, **kwargs):
         if CONF.notification.default_action == "requeue":
             return oslo_messaging.NotificationResult.REQUEUE

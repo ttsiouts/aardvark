@@ -55,10 +55,9 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
     def __init__(self):
         super(StateUpdateEndpoint, self).__init__()
         self.novaclient = nova.novaclient()
+        self.job_manager = job_manager.JobManager()
         # Use this dict to bundle up the scheduling events
         self.bundled_reqs = collections.defaultdict(list)
-        self.job_manager = job_manager.JobManager()
-        self.job_manager.start_workers()
 
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
         event = events.InstanceUpdateEvent(payload)
@@ -112,6 +111,3 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
         for uuid in uuids:
             LOG.info('Resetting server %s to error', uuid)
             self.novaclient.servers.reset_state(uuid)
-
-    def stop(self):
-        self.job_manager.stop_workers()
