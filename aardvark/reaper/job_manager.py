@@ -85,7 +85,8 @@ class JobManager(object):
             instance = reaper.Reaper(aggregates)
             instance.worker = threading_utils.daemon_thread(instance.job_handler)
             self.reaper_instances.append(instance)
-            self.watched_aggregates.append(aggregates)
+            #self.watched_aggregates.append(aggregates)
+            self.watched_aggregates += aggregates
 
     def start_workers(self):
         LOG.info('Starting workers')
@@ -101,11 +102,17 @@ class JobManager(object):
     def post_job(self, details):
         # Make sure that the forwarded requests are for watched
         # aggregates.
-        if details.aggregates not in self.watched_aggregates:
+        if not self._is_aggregate_watched(details.aggregates):
             # Skip this check if we have only one worker.
             if self.watched_aggregates != [[]]:
+                LOG.error('Request for not watched aggregate %s ',
+                          details.aggregates)
                 raise exception.UnwatchedAggregate()
 
         with backends.backend(self.board_name, SHARED_CONF.copy()) as board:
             job = board.post("ReaperJob", book=None, details=details.to_dict())
-            print "posted: %s" % job
+
+    def _is_aggregate_watched(self, aggregates):
+        l1 = [agg for agg in self.watched_aggregates if agg in aggregates]
+        l2 = [agg for agg in aggregates if agg in self.watched_aggregates]
+        return l1 == l2

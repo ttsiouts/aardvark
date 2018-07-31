@@ -120,21 +120,11 @@ class Reaper(object):
                 jobs = board.iterjobs(ensure_fresh=True, only_unclaimed=True)
                 for job in jobs:
                     request = rr_obj.ReaperRequest.from_primitive(job.details)
-                    if request.aggregates != self.aggregates:
-                        # If we are in the case where one worker is looking
-                        # after the whole infrastructure then we accept all
-                        # requests.
-                        if self.aggregates != []:
-                            continue
-
-                        # If we receive a request without explicit aggregates
-                        # set the aggregates of the request to self.aggregates
-                        # so that we avoid invalidating the system state of
-                        # other worker threads.
-                        if request.aggregates == []:
-                            request.aggregates = self.aggregates
+                    if not self._is_aggregate_watched(request.aggregates):
+                        continue
                     try:
                         board.claim(job, "worker")
+                        LOG.debug("Claimed %s", job)
                     except (excp.UnclaimableJob, excp.NotFound):
                         # Another worker maybe claimed the job. No need to
                         # take further actions.
@@ -142,11 +132,19 @@ class Reaper(object):
                     else:
                         self.take_action(request)
                         board.consume(job, "worker")
-                        LOG.info("Consumed %s", job)
+                        LOG.debug("Consumed %s", job)
 
         LOG.info("Reaper worker stopped: %s", self.aggregates)
 
     def take_action(self, request):
+        # If we receive a request without explicit aggregates
+        # set the aggregates of the request to self.aggregates
+        # so that we avoid invalidating the system state of
+        # other worker threads by altering the state of resource
+        # providers originally not watched by this thread.
+        if request.aggregates == []:
+            request.aggregates = self.aggregates
+
         try:
             self.handle_request(request)
             self._rebuild_instances(request.uuids, request.image)
@@ -166,3 +164,8 @@ class Reaper(object):
         for uuid in uuids:
             LOG.info('Resetting server %s to error', uuid)
             self.novaclient.servers.reset_state(uuid)
+
+    def _is_aggregate_watched(self, aggregates):
+        l1 = [agg for agg in self.aggregates if agg in aggregates]
+        l2 = [agg for agg in aggregates if agg in self.aggregates]
+        return l1 == l2
