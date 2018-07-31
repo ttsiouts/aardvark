@@ -83,13 +83,16 @@ class PlacementClient(object):
         return response.json()
 
     @exception_map
-    def resource_providers(self, filters=None):
+    def resource_providers(self, aggregates=None):
         """Returns the resource providers from Placement API
 
-        :param filters: A dictionary of filters to be passes to Placement API
+        :param aggregates: A dictionary of filters to be passes to Placement API
                         If None, returns all the RPs in the system
         """
-        url = '/resource_providers'
+        filter_str = ""
+        if aggregates:
+            filter_str = "?member_of=in:" + ','.join(aggregates)
+        url = '/resource_providers%s' % filter_str
         resource_providers = self._get(url)
         return resource_providers['resource_providers']
 

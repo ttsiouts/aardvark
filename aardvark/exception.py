@@ -29,6 +29,7 @@ class AardvarkException(Exception):
             self.message = message
         super(AardvarkException, self).__init__(self.message)
 
+
 class RetryException(AardvarkException):
     """Generic Exception for the retries mechanism"""
     message=''
@@ -42,5 +43,10 @@ class ReaperException(AardvarkException):
 class NotEnoughResources(ReaperException):
     message = "Unknown error occurred while trying to make space"
 
+
 class PreemptibleRequest(ReaperException):
     message = "Making space only for non-preemptible reqs."
+
+
+class UnwatchedAggregate(ReaperException):
+    message = "Received request for unwatched aggregate."

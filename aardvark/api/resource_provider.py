@@ -51,10 +51,11 @@ class ResourceProvider(object):
 
 class ResourceProviderList(object):
 
-    def __init__(self):
+    def __init__(self, aggregates=None):
         self.client = client.PlacementClient()
+        self.aggregates = aggregates
 
     @property
     def resource_providers(self):
-        rps = self.client.resource_providers()
+        rps = self.client.resource_providers(self.aggregates)
         return [rp_obj.ResourceProvider(rp['uuid'], rp['name']) for rp in rps]

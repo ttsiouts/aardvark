@@ -57,7 +57,7 @@ The number of alternative slots that the the reaper will try to free up for
 each requested slot.
 """
     ),
-    cfg.MultiStrOpt('cell_aggregates',
+    cfg.MultiStrOpt('watched_aggregates',
                default=[],
                help="""
 The list of aggregates that the reaper will try to make space to

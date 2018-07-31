@@ -76,5 +76,6 @@ class ResourceProviderList(base.PlacementObjectWrapper):
 
     _attrs = ['resource_providers']
 
-    def __init__(self):
-        super(ResourceProviderList, self).__init__()
+    def __init__(self, aggregates=None):
+        super(ResourceProviderList, self).__init__(aggregates=aggregates)
+        self.aggregates = aggregates

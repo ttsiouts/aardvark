@@ -42,6 +42,14 @@ class SchedulingEvent(base.NotificationEvent):
     def project_id(self):
         return self.request_spec['nova_object.data']['project_id']
 
+    @property
+    def aggregates(self):
+        try:
+           d = self.request_spec['nova_object.data']['requested_destination']
+           return d['nova_object.data']['aggregates']
+        except KeyError:
+           return None
+
 
 class InstanceUpdateEvent(base.NotificationEvent):
     """Instance State Update Event"""

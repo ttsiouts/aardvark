@@ -20,8 +20,9 @@ from aardvark.notifications import base
 from aardvark.notifications import events
 from aardvark import exception
 from aardvark.objects import resources as resources_obj
-from aardvark.objects import system as system_obj
 from aardvark.reaper import reaper as reaper_obj
+from aardvark.reaper import job_manager
+from aardvark.reaper import reaper_request as rr_obj
 from aardvark.api.rest import nova
 
 from oslo_concurrency import lockutils
@@ -31,25 +32,25 @@ from oslo_log import log as logging
 LOG = logging.getLogger(__name__)
 
 
-class SyncedInstanceMap(dict):
+class SafeDict(dict):
     """The internal instance to scheduling info
 
     Try to create a threadsafe dictionary by locking the methods needed.
     """
     @lockutils.synchronized('reaper_lock')
     def __setitem__(self, key, item):
-        super(SyncedInstanceMap, self).__setitem__(key, item)
+        super(SafeDict, self).__setitem__(key, item)
 
     @lockutils.synchronized('reaper_lock')
     def __getitem__(self, key):
-        return super(SyncedInstanceMap, self).__getitem__(key)
+        return super(SafeDict, self).__getitem__(key)
 
     @lockutils.synchronized('reaper_lock')
     def __delitem__(self, key):
-        super(SyncedInstanceMap, self).__delitem__(key)
+        super(SafeDict, self).__delitem__(key)
 
 
-instance_map = SyncedInstanceMap()
+instance_map = SafeDict()
 
 
 def retries(fn):
@@ -87,10 +88,10 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
     def __init__(self):
         super(StateUpdateEndpoint, self).__init__()
         self.novaclient = nova.novaclient()
-        self.reaper = reaper_obj.Reaper()
-        self.system = system_obj.System()
         # Use this dict to bundle up the scheduling events
         self.bundled_reqs = collections.defaultdict(list)
+        self.job_manager = job_manager.JobManager()
+        self.job_manager.start_workers()
 
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
         event = events.InstanceUpdateEvent(payload)
@@ -107,14 +108,15 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
     @retries
     def trigger_reaper(self, uuid, flavor, image):
         
-        # Enrich the request with info from the instance_map
-        request = resources_obj.Resources.obj_from_payload(flavor)
         try:
             # No default value in order to retry
             info = instance_map.pop(uuid)
         except KeyError:
             # Maybe there is a race. Raising RetryException to rerty
             raise exception.RetryException()
+
+        # Enrich the request with info from the instance_map
+        request = resources_obj.Resources.obj_from_payload(flavor)
 
         uuids = info.instance_uuids
         request_id = info.request_id
@@ -131,25 +133,18 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
             # notifications are received
             del self.bundled_reqs[request_id]
 
+        reaper_request = rr_obj.ReaperRequest(
+                uuids, info.project_id, request, image, info.aggregates)
         try:
-            self.reaper.handle_request(request, self.system, info.project_id,
-                                       len(uuids))
-            self._rebuild_instances(uuids, image)
+            self.job_manager.post_job(reaper_request)
         except exception.ReaperException as e:
             LOG.error(e.message)
             self._reset_instances(uuids)
-
-        # Cached system information is going to be used inside the Reaper.
-        # Empty the cache here so they are going to be fetched again on the
-        # next run.
-        self.system.empty_cache()
-
-    def _rebuild_instances(self, uuids, image):
-        for uuid in uuids:
-            LOG.info("Rebuilding server with uuid: %s", uuid)
-            self.novaclient.servers.rebuild(uuid, image)
 
     def _reset_instances(self, uuids):
         for uuid in uuids:
             LOG.info('Resetting server %s to error', uuid)
             self.novaclient.servers.reset_state(uuid)
+
+    def stop(self):
+        self.job_manager.stop_workers()
