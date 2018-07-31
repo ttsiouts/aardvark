@@ -18,6 +18,7 @@ import six
 
 from aardvark import exception
 from aardvark.reaper import reaper
+from aardvark.api.rest import nova
 import aardvark.conf
 
 from oslo_log import log as logging
@@ -53,13 +54,25 @@ class JobManager(object):
                 pass
         self.watched_aggregates = []
         self.reaper_instances = []
-        self._setup_workers(CONF.reaper.watched_aggregates)
+        self._setup_workers(self._aggregates())
         # HACK: if a request is received without excplicitly defined
         # aggregates, then any of the workers can pick it up. For this
         # reason, we make sure, that [] is always included in the list of
         # watched aggregates.
         if [] not in self.watched_aggregates:
             self.watched_aggregates.append([])
+
+    def _aggregates(self):
+        """Maps aggregate names to uuids"""
+        novaclient = nova.novaclient()
+        aggregate_map = {
+            agg.name: agg.uuid for agg in novaclient.aggregates.list()
+        }
+        uuids = []
+        for aggregates in CONF.reaper.watched_aggregates:
+            aggregates = aggregates.split('|')
+            uuids.append([aggregate_map[agg.strip()] for agg in aggregates])
+        return uuids
 
     def _setup_workers(self, watched_aggregates):
         if len(watched_aggregates) == 0:
@@ -87,9 +100,11 @@ class JobManager(object):
 
     def post_job(self, details):
         # Make sure that the forwarded requests are for watched
-        # aggregates
+        # aggregates.
         if details.aggregates not in self.watched_aggregates:
-            raise exception.UnwatchedAggregate()
+            # Skip this check if we have only one worker.
+            if self.watched_aggregates != [[]]:
+                raise exception.UnwatchedAggregate()
 
         with backends.backend(self.board_name, SHARED_CONF.copy()) as board:
             job = board.post("ReaperJob", book=None, details=details.to_dict())

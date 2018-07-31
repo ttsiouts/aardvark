@@ -22,7 +22,7 @@ from aardvark import exception
 from aardvark.api.rest import nova
 from aardvark.objects import project
 from aardvark.objects import instance
-from aardvark.objects import system
+from aardvark.objects import system as system_obj
 from aardvark.reaper import reaper_request as rr_obj
 
 import aardvark.conf
@@ -53,7 +53,6 @@ class Reaper(object):
         self.novaclient = nova.novaclient()
 
         self.aggregates = aggregates if aggregates else []
-        self.system = system.System(aggregates)
 
         # Load the configured driver
         self.driver = driver.DriverManager(
@@ -73,11 +72,12 @@ class Reaper(object):
         :param resources: the requested resources
         """
 
+        system = system_obj.System(request.aggregates)
         slots = 1
         if not self.watermark_mode:
             slots = len(request.uuids)
             preemptible_projects = [
-                project.id_ for project in self.system.preemptible_projects
+                project.id_ for project in system.preemptible_projects
             ]
             if request.project_id in preemptible_projects:
                 # Make space only if the requesting project is
@@ -86,9 +86,9 @@ class Reaper(object):
 
         instance_list = instance.InstanceList()
 
-        for rp in self.system.resource_providers:
+        for rp in system.resource_providers:
             servers = list()
-            for project in self.system.preemptible_projects:
+            for project in system.preemptible_projects:
                 filters = {
                     'host': rp.name,
                     'project_id': project.id_,
@@ -99,7 +99,7 @@ class Reaper(object):
 
         selected_hosts, selected_servers = \
             self.driver.get_preemptible_servers(
-                request.resources, self.system.resource_providers, slots)
+                request.resources, system.resource_providers, slots)
 
         for server in selected_servers:
             LOG.info("Deleting server: %s" % server.name)
@@ -108,11 +108,6 @@ class Reaper(object):
 
         # Wait until allocations are removed
         time.sleep(5)
-
-        # Cached system information is going to be used inside the Reaper.
-        # Empty the cache here so they are going to be fetched again on the
-        # next run.
-        self.system.empty_cache()
 
     def notify_about_instance(self, instance):
         # notify with the configured notification system before deleting
@@ -126,13 +121,24 @@ class Reaper(object):
                 for job in jobs:
                     request = rr_obj.ReaperRequest.from_primitive(job.details)
                     if request.aggregates != self.aggregates:
-                        continue
+                        # If we are in the case where one worker is looking
+                        # after the whole infrastructure then we accept all
+                        # requests.
+                        if self.aggregates != []:
+                            continue
+
+                        # If we receive a request without explicit aggregates
+                        # set the aggregates of the request to self.aggregates
+                        # so that we avoid invalidating the system state of
+                        # other worker threads.
+                        if request.aggregates == []:
+                            request.aggregates = self.aggregates
                     try:
                         board.claim(job, "worker")
                     except (excp.UnclaimableJob, excp.NotFound):
                         # Another worker maybe claimed the job. No need to
                         # take further actions.
-                        pass
+                        continue
                     else:
                         self.take_action(request)
                         board.consume(job, "worker")

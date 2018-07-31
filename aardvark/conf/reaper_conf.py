@@ -57,12 +57,17 @@ The number of alternative slots that the the reaper will try to free up for
 each requested slot.
 """
     ),
-    cfg.MultiStrOpt('watched_aggregates',
+    cfg.ListOpt('watched_aggregates',
                default=[],
                help="""
-The list of aggregates that the reaper will try to make space to
+The list of aggregate names that the reaper will try to make space to
 
 Each element of the list can be an aggregate or a combination of aggregates.
+Combination of aggregates is a single string with a vertical-line-separated
+aggregate names.
+
+e.g. watched_aggregates={agg_name1},{agg_name2}|{agg_name3}',....
+
 For each element in the list, a reaper thread will be spawned and the request
 will be forwarded to the responsible worker.
 
