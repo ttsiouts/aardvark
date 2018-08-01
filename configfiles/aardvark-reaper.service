@@ -1,0 +1,12 @@
+[Unit]
+Description=Aardvark Server
+After=syslog.target network.target
+
+[Service]
+Type=simple
+User=aardvark
+ExecStart=/usr/bin/aardvark_reaper --config-file=/etc/aardvark/aardvark.conf
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
