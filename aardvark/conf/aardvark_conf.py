@@ -47,6 +47,12 @@ This is taken under consideration only if the watermark mode is enabled. To
 enable it, set the config option aardvark.enable_watermark_mode to True.
 """
     ),
+    cfg.IntOpt('periodic_interval',
+               default=10,
+               help="""
+Default interval (in seconds) for running periodic tasks.
+"""
+    ),
 ]
 
 

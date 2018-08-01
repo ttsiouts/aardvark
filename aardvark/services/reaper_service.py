@@ -97,7 +97,7 @@ class ReaperService(service.Service):
         admin_context = context.get_admin_context()
         self.tg.add_dynamic_timer(
             self.state_calculator.periodic_tasks,
-            periodic_interval_max=CONF.periodic_interval,
+            periodic_interval_max=CONF.aardvark.periodic_interval,
             context=admin_context)
 
 
@@ -111,7 +111,7 @@ class SystemStateCalculator(periodic_task.PeriodicTasks):
     def periodic_tasks(self, context, raise_on_error=False):
         return self.run_periodic_tasks(context, raise_on_error=raise_on_error)
 
-    @periodic_task.periodic_task(spacing=CONF.periodic_interval,
+    @periodic_task.periodic_task(spacing=CONF.aardvark.periodic_interval,
                                  run_immediately=True)
     def calculate_system_state(self, context, startup=True):
         LOG.debug('Periodic Timer for state check expired ')

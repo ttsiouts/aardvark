@@ -1,7 +1,6 @@
 from oslo_config import cfg
 
 from aardvark.conf import aardvark_conf
-from aardvark.conf import default_conf
 from aardvark.conf import notification_conf
 from aardvark.conf import nova_conf
 from aardvark.conf import keystone_conf
@@ -13,7 +12,6 @@ CONF = cfg.CONF
 
 
 aardvark_conf.register_opts(CONF)
-default_conf.register_opts(CONF)
 notification_conf.register_opts(CONF)
 nova_conf.register_opts(CONF)
 keystone_conf.register_opts(CONF)
