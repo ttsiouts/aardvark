@@ -13,16 +13,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import oslo_messaging
 import aardvark.conf
+import oslo_messaging
+
 
 CONF = aardvark.conf.CONF
+
 
 class NotificationEndpoint(object):
     """Base Endpoint for plugins that support the notification API."""
 
     event_types = []
-    
+
     """List of strings to filter messages on."""
 
     def __init__(self):
@@ -37,7 +39,7 @@ class NotificationEndpoint(object):
         if CONF.notification.default_action == "handled":
             return oslo_messaging.NotificationResult.HANDLED
 
-    audit = _default_action 
+    audit = _default_action
     critical = _default_action
     debug = _default_action
     error = _default_action
@@ -47,11 +49,11 @@ class NotificationEndpoint(object):
 
 
 class NotificationEvent(object):
-   """Base Notification event
+    """Base Notification event
 
-   The notification payload is cast into this event as soon as the
-   notification is received
-   """
+    The notification payload is cast into this event as soon as the
+    notification is received
+    """
 
-   def __init__(self, payload):
-       self.payload = payload
+    def __init__(self, payload):
+        self.payload = payload

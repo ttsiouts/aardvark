@@ -32,7 +32,7 @@ class AardvarkException(Exception):
 
 class RetryException(AardvarkException):
     """Generic Exception for the retries mechanism"""
-    message=''
+    message = ''
 
 
 class ReaperException(AardvarkException):

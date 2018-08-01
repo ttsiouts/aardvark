@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from aardvark.objects import resources 
+from aardvark.objects import resources
 
 
 class Capabilities(object):

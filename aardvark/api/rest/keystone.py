@@ -32,7 +32,7 @@ def exception_map(f):
         try:
             return f(self, *a, **k)
         except keystone_exc.NotFound:
-            # TODO: map the exceptions
+            # TODO(ttsiouts): map the exceptions
             return None
     return wrapper
 
@@ -60,9 +60,8 @@ class KeystoneClient(object):
 
     def get_projects(self, tags=None):
         # FIXME
-        projects = []
         url = "/v3/projects"
-        if not tags is None:
-           url += "?tags=%s" % ','.join(tag for tag in tags)
+        if tags is not None:
+            url += "?tags=%s" % ','.join(tag for tag in tags)
         resp = self._get(url)
         return resp['projects']

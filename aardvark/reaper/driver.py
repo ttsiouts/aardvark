@@ -15,13 +15,11 @@
 
 import abc
 import six
-import time
 
-from functools import wraps
+from aardvark import exception
+from aardvark.objects import resources as resources_obj
 
 from oslo_log import log as logging
-from aardvark.objects import resources as resources_obj
-from aardvark import exception
 
 LOG = logging.getLogger(__name__)
 

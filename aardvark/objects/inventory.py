@@ -18,6 +18,7 @@ import aardvark.conf
 
 CONF = aardvark.conf.CONF
 
+
 class Inventory(object):
 
     _attrs = ['used', 'max_unit', 'step_size', 'min_unit', 'total']
@@ -25,7 +26,6 @@ class Inventory(object):
     def __init__(self, resource_class, **kwargs):
         self.resource_class = resource_class
 
-        import pdb; pdb.set_trace()
         allocation_ratio = kwargs['allocation_ratio']
         reserved = kwargs['reserved']
 

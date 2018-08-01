@@ -13,10 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
+import aardvark.conf
 from aardvark import exception
 from aardvark import utils
-import aardvark.conf
 
 from oslo_log import log as logging
 from taskflow.jobs import backends
@@ -61,7 +60,7 @@ class JobManager(object):
         }
 
         with backends.backend(self.board_name, backend_conf.copy()) as board:
-            job = board.post("ReaperJob", book=None, details=details.to_dict())
+            board.post("ReaperJob", book=None, details=details.to_dict())
 
     def _is_aggregate_watched(self, aggregates):
         l1 = [agg for agg in self.watched_aggregates if agg in aggregates]

@@ -16,6 +16,7 @@
 from aardvark.api.rest import nova
 from aardvark.objects import instance
 
+
 class Instance(object):
 
     def __init__(self, uuid, name, flavor):

@@ -16,6 +16,7 @@
 from aardvark.objects import base
 from aardvark.objects import resources
 
+
 class Instance(base.BaseObjectWrapper):
 
     _attrs = ['name', 'uuid', 'flavor']
@@ -39,7 +40,7 @@ class InstanceList(base.BaseObjectWrapper):
         super(InstanceList, self).__init__()
 
     def instances(self, **filters):
-        instances =  self._resource.instances(**filters)
+        instances = self._resource.instances(**filters)
         return instances
 
     def delete_instance(self, instance):

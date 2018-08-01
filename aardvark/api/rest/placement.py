@@ -32,7 +32,7 @@ def exception_map(f):
         try:
             return f(self, *a, **k)
         except keystone_exc.NotFound:
-            # TODO: map the exceptions
+            # TODO(ttsiouts): map the exceptions
             return None
     return wrapper
 
@@ -86,8 +86,8 @@ class PlacementClient(object):
     def resource_providers(self, aggregates=None):
         """Returns the resource providers from Placement API
 
-        :param aggregates: A dictionary of filters to be passes to Placement API
-                        If None, returns all the RPs in the system
+        :param aggregates: A dictionary of filters to be passes to Placement
+                           If None, returns all the RPs in the system
         """
         filter_str = ""
         if aggregates:
@@ -153,9 +153,8 @@ class PlacementClient(object):
         :param resource_provider: the provider to search for
         """
         url = "/usages?project_id=%s" % project_id
-        if not user_id is None:
+        if user_id is not None:
             url += "&user_id=%s" % user_id
-        
         response = self._get(url)
         return response['usages']
 

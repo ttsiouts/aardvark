@@ -14,14 +14,13 @@
 #    under the License.
 
 import aardvark.conf
-
-from aardvark import exception
-from aardvark.reaper import driver
 from aardvark.objects import resources as resources_obj
+from aardvark.reaper import driver
 
 from oslo_log import log as logging
 
 import random
+
 
 LOG = logging.getLogger(__name__)
 CONF = aardvark.conf.CONF
@@ -154,7 +153,7 @@ class ChanceDriver(driver.ReaperDriver):
         if len(selected) > 0:
             host.reserve_resources(resources, requested)
             host.preemptible_servers = [
-                server for server in host.preemptible_servers 
-                if server not in selected]
+                pr_server for pr_server in host.preemptible_servers
+                if pr_server not in selected]
 
         return selected

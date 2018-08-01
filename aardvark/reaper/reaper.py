@@ -14,28 +14,24 @@
 #    under the License.
 
 
+import functools
 from stevedore import driver
+import time
 
-from oslo_log import log as logging
-
-from aardvark import exception
 from aardvark.api.rest import nova
-from aardvark.objects import project
-from aardvark.objects import instance
+import aardvark.conf
+from aardvark import exception
 from aardvark.objects import system as system_obj
 from aardvark.reaper import reaper_request as rr_obj
 
-import aardvark.conf
+from oslo_log import log as logging
 
-import time
-import functools
-
-from taskflow.jobs import backends
 from taskflow import exceptions as excp
+from taskflow.jobs import backends
+
 
 CONF = aardvark.conf.CONF
 LOG = logging.getLogger(__name__)
-
 
 
 def while_running(fn):
@@ -53,12 +49,11 @@ class Reaper(object):
     """
     def __init__(self, aggregates=None, watermark_mode=False):
         self.watermark_mode = watermark_mode
-        invoke_args = tuple([self.watermark_mode])
         self.novaclient = nova.novaclient()
 
         self.aggregates = aggregates if aggregates else []
-        # TODO: Load configured notification system in order to notify
-        # the owner of the server that will be terminated
+        # TODO(ttsiouts): Load configured notification system in order to
+        # notify the owner of the server that will be terminated
 
     def _load_configured_driver(self, watermark_mode=False):
         """Loads the configured driver"""
@@ -69,7 +64,6 @@ class Reaper(object):
             invoke_args=tuple([watermark_mode])).driver
 
     def evaluate_reaper_request(self, request):
-        # TODO: Rename to handle_request
         # If we receive a request without explicit aggregates
         # set the aggregates of the request to self.aggregates
         # so that we don't invalidate the system state of
@@ -134,7 +128,7 @@ class Reaper(object):
                 request, system.resource_providers, slots)
 
         for server in selected_servers:
-            LOG.info("Deleting server: %s" % server.name)
+            LOG.info("Deleting server: %s", server.name)
             self.notify_about_instance(server)
             self.novaclient.servers.delete(server.uuid)
 

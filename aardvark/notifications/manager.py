@@ -13,11 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import aardvark.conf
 from aardvark.notifications import endpoints as endpoint_objs
 import oslo_messaging
-import aardvark.conf
+
 
 CONF = aardvark.conf.CONF
+
 
 class ListenerManager(object):
 

@@ -20,6 +20,7 @@ class Usage(object):
         self.resource = resource
         self.amount = amount
 
+
 class UsageList(object):
 
     @classmethod

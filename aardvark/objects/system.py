@@ -13,12 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from aardvark.objects import base
-from aardvark.objects import instance
-from aardvark.objects import resource_provider
-from aardvark.objects import project
-from aardvark.objects import resources
 from aardvark.objects import capabilities
+from aardvark.objects import instance
+from aardvark.objects import project
+from aardvark.objects import resource_provider
+from aardvark.objects import resources
+
 
 class System(object):
 
@@ -52,10 +52,10 @@ class System(object):
         instance_list = instance.InstanceList()
         for rp in self.resource_providers:
             servers = list()
-            for project in self.preemptible_projects:
+            for pr_project in self.preemptible_projects:
                 filters = {
                     'host': rp.name,
-                    'project_id': project.id_,
+                    'project_id': pr_project.id_,
                     'vm_state': 'ACTIVE'
                 }
                 servers += instance_list.instances(**filters)
