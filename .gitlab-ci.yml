@@ -1,0 +1,27 @@
+stages:
+  - test
+
+#before_script:
+#  - if [ -z "$CI_BUILD_TAG" ]; then export CI_BUILD_TAG=$CI_DEFAULT_BUILD_TAG; fi
+#  - export parser=(${CI_BUILD_TAG//-/ })
+#  - sed -i s/CERN_VERSION_PLACEHOLDER/${parser[0]}/g python-django-horizon.spec
+#  - sed -i s/CERN_RELEASE_PLACEHOLDER/${parser[1]}/g python-django-horizon.spec
+#  - python setup.py egg_info
+#  - cp horizon.egg-info/PKG-INFO .
+
+pep8:
+  stage: test
+  image: gitlab-registry.cern.ch/cloud-infrastructure/cci-scripts/tox
+  except:
+    - tags
+  script:
+    - cd $CI_PROJECT_DIR
+    - tox -epep8
+
+#rpmbuild:
+#  stage: test
+#  image: gitlab-registry.cern.ch/cloud-infrastructure/cci-scripts/rpm-builder:queens
+#  except:
+#    - tags
+#  script:
+#    - curl https://gitlab.cern.ch/cloud-infrastructure/cloud-dev/raw/master/gitlab/rpmbuild.sh | bash
