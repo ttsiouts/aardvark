@@ -13,18 +13,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import collections
 
+from aardvark.api.rest import nova
+from aardvark import exception
 from aardvark.notifications import base
 from aardvark.notifications import events
-from aardvark import exception
-from aardvark import utils
 from aardvark.objects import resources as resources_obj
-from aardvark.reaper import reaper as reaper_obj
 from aardvark.reaper import job_manager
 from aardvark.reaper import reaper_request as rr_obj
-from aardvark.api.rest import nova
+from aardvark import utils
 
+import collections
 from oslo_log import log as logging
 
 
@@ -73,7 +72,6 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
 
     @utils.retries
     def trigger_reaper(self, uuid, flavor, image):
-        
         try:
             # No default value in order to retry
             info = instance_map.pop(uuid)
@@ -88,7 +86,7 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
         request_id = info.request_id
 
         if info.multiple_instances:
-            self.bundled_reqs[info.request_id]  += [uuid]
+            self.bundled_reqs[info.request_id] += [uuid]
             if len(info.instance_uuids) != len(self.bundled_reqs[request_id]):
                 # Wait until the last instance for this request is set to the
                 # Pending state, bundle the requests and trigger the reaper

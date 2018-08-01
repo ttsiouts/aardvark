@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from  aardvark.api.rest import placement
+from aardvark.api.rest import placement
 from oslotest import base
 
 

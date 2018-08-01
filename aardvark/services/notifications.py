@@ -13,9 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_context import context
 from oslo_log import log
-import oslo_messaging
 from oslo_service import service
 
 import aardvark.conf

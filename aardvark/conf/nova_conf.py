@@ -19,11 +19,13 @@ from oslo_config import cfg
 
 SERVICE_TYPE = 'compute'
 
+
 compute_group = cfg.OptGroup(
     'compute',
     title='Compute Service Options',
     help="Configuration options for connecting to the Nova API service"
 )
+
 
 compute_opts = [
     cfg.StrOpt("client_version",
@@ -33,6 +35,7 @@ Selects where the API microversion requested by the novaclient.
 """
     ),
 ]
+
 
 def register_opts(conf):
 
@@ -46,6 +49,7 @@ def register_opts(conf):
 
     adapter_opts = get_ksa_adapter_opts(SERVICE_TYPE)
     conf.register_opts(adapter_opts, group=group)
+
 
 def get_ksa_adapter_opts(default_service_type, deprecated_opts=None):
 

@@ -16,6 +16,7 @@
 from aardvark.api.rest import keystone
 from aardvark.objects import project as pr_obj
 
+
 class Project(object):
 
     def __init__(self, id_, name, preemptible=False):
@@ -36,7 +37,7 @@ class ProjectList(object):
         for project in self.client.get_projects():
             try:
                 projects.append(pr_obj.Project(
-                    project['id'], project['name'], project['preemptible'])) 
+                    project['id'], project['name'], project['preemptible']))
             except KeyError:
                 projects.append(pr_obj.Project(
                     project['id'], project['name']))

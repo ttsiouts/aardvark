@@ -15,18 +15,17 @@
 
 
 import six
-import functools
 
-from oslo_log import log
 from oslo_context import context
-from oslo_service import service
+from oslo_log import log
 from oslo_service import periodic_task
+from oslo_service import service
 from taskflow.utils import threading_utils
 
 import aardvark.conf
-from aardvark.reaper import reaper
 from aardvark import config
 from aardvark.reaper import job_manager
+from aardvark.reaper import reaper
 from aardvark.reaper import reaper_request as rr_obj
 from aardvark import utils
 
@@ -35,21 +34,11 @@ LOG = log.getLogger(__name__)
 CONF = aardvark.conf.CONF
 
 
-def watermark_enabled(fn):
-    @functools.wraps(fn)
-    def wrapper(*args, **kwargs):
-        if CONF.aardvark.enable_watermark_mode:
-            fn(*args, **kwargs)
-    return wrapper
-
-
 class ReaperService(service.Service):
 
     def __init__(self):
         super(ReaperService, self).__init__()
         if six.PY3:
-            # TODO(ttsiouts): Hack to make eventlet work right, remove when the
-            # following is fixed: https://github.com/eventlet/eventlet/issues/230
             from taskflow.utils import eventlet_utils as _eu  # noqa
             try:
                 import eventlet as _eventlet  # noqa
@@ -87,10 +76,11 @@ class ReaperService(service.Service):
             if not isinstance(aggregates, list):
                 aggregates = [aggregates]
             instance = reaper.Reaper(aggregates)
-            instance.worker = threading_utils.daemon_thread(instance.job_handler)
+            instance.worker = threading_utils.daemon_thread(
+                instance.job_handler)
             self.reaper_instances.append(instance)
 
-    @watermark_enabled
+    @utils.watermark_enabled
     def _start_state_calculation(self):
         self.state_calculator = SystemStateCalculator()
         LOG.info('Starting Periodic System State Calculation')

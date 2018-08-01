@@ -1,6 +1,6 @@
-from aardvark.api.instance import Instance
-from aardvark.api.instance import InstanceList
-from aardvark.api.resource_provider import ResourceProvider
-from aardvark.api.resource_provider import ResourceProviderList
-from aardvark.api.project import Project
-from aardvark.api.project import ProjectList
+from aardvark.api.instance import Instance  # noqa
+from aardvark.api.instance import InstanceList  # noqa
+from aardvark.api.project import Project  # noqa
+from aardvark.api.project import ProjectList  # noqa
+from aardvark.api.resource_provider import ResourceProvider  # noqa
+from aardvark.api.resource_provider import ResourceProviderList  # noqa

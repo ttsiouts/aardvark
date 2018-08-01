@@ -19,11 +19,13 @@ from oslo_config import cfg
 
 SERVICE_TYPE = 'keystone'
 
+
 identity_group = cfg.OptGroup(
     'identity',
     title='Keystone Service Options',
     help="Configuration options for connecting to the keystone API service"
 )
+
 
 def register_opts(conf):
 
@@ -36,6 +38,7 @@ def register_opts(conf):
 
     adapter_opts = get_ksa_adapter_opts(SERVICE_TYPE)
     conf.register_opts(adapter_opts, group=group)
+
 
 def get_ksa_adapter_opts(default_service_type, deprecated_opts=None):
 

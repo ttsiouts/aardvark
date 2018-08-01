@@ -14,8 +14,8 @@
 #    under the License.
 
 from aardvark.objects import base
-from aardvark.objects import capabilities
 from aardvark.objects import resources
+
 
 class ResourceProvider(base.PlacementObjectWrapper):
 
@@ -64,7 +64,7 @@ class ResourceProvider(base.PlacementObjectWrapper):
         else:
             self.capabilities.used += requested - resources
         self.capabilities.reserved += requested
-        
+
     def __eq__(self, other):
         return self.uuid == other.uuid
 

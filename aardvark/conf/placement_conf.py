@@ -19,10 +19,12 @@ from oslo_config import cfg
 
 SERVICE_TYPE = 'placement'
 
+
 placement_group = cfg.OptGroup(
     'placement',
     title='Placement Service Options',
     help="Configuration options for connecting to the placement API service")
+
 
 placement_opts = [
     cfg.StrOpt("backend",
@@ -51,6 +53,7 @@ def register_opts(conf):
 
     adapter_opts = get_ksa_adapter_opts(SERVICE_TYPE)
     conf.register_opts(adapter_opts, group=group)
+
 
 def get_ksa_adapter_opts(default_service_type, deprecated_opts=None):
 

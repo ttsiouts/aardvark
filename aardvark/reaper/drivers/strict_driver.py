@@ -15,10 +15,10 @@
 
 import itertools
 from oslo_log import log as logging
-import random
 
 import aardvark.conf
 from aardvark.reaper import driver
+
 
 LOG = logging.getLogger(__name__)
 CONF = aardvark.conf.CONF
@@ -80,9 +80,9 @@ class StrictDriver(driver.ReaperDriver):
         # NOTE: Get the flavor combinations from the hosts
         combinations = list()
         for host in hosts:
-             preemptible = rp.preemptible_servers()
-             for num in xrange(0, len(preemptible)):
-                 combiantions += itertools.combinations(preemptible, num)
+            preemptible = host.preemptible_servers()
+            for num in xrange(0, len(preemptible)):
+                combinations += itertools.combinations(preemptible, num)
 
         if not combinations:
             return None

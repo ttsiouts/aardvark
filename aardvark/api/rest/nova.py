@@ -13,11 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from novaclient import client
-from keystoneauth1 import exceptions as keystone_exc
 from keystoneauth1 import loading as keystone_loading
+from novaclient import client
 
 import aardvark.conf
+
 
 CONF = aardvark.conf.CONF
 
@@ -26,9 +26,11 @@ def delete_server(server_uuid):
     """Deletes the given server"""
     pass
 
+
 def rebuild_server(server_uuid):
     """Rebuilds the given server"""
     pass
+
 
 def novaclient():
     auth_plugin = keystone_loading.load_auth_from_conf_options(CONF,

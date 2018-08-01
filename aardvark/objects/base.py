@@ -27,7 +27,7 @@ class BaseObjectWrapper(object):
     _attrs = []
     _resource = None
 
-    def __init__(self,  *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         backend = "aardvark.api"
         module = importutils.try_import(backend)
 
@@ -54,7 +54,7 @@ class BaseObjectWrapper(object):
                 delattr(self, attr)
 
     def __repr__(self):
-        to_string = ", ".join("%s = %s" % (attr, getattr(self, attr)) 
+        to_string = ", ".join("%s = %s" % (attr, getattr(self, attr))
                               for attr in self._attrs if hasattr(self, attr))
         return "<%s: %s>" % (self.__class__.__name__, to_string)
 
@@ -73,7 +73,7 @@ class PlacementObjectWrapper(BaseObjectWrapper):
     configuration option that the operator chose.
     """
 
-    def __init__(self,  **kwargs):
+    def __init__(self, **kwargs):
         placement_backend = "aardvark.%s" % CONF.placement.backend
         module = importutils.try_import(placement_backend)
 

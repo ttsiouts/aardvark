@@ -53,7 +53,7 @@ class Resources(object):
         disk = flavor['ephemeral'] + flavor['disk'] + flavor['swap']
         ram = flavor['ram']
 
-        # TODO: Here we have to check the extra_specs of the flavor
+        # TODO(ttsiouts): Here we have to check the extra_specs of the flavor
         resources = {}
         if vcpus > 0:
             resources.update({'VCPU': vcpus})
@@ -70,7 +70,7 @@ class Resources(object):
         disk = flavor['ephemeral_gb'] + flavor['root_gb'] + flavor['swap']
         ram = flavor['memory_mb']
 
-        # TODO: Here we have to check the extra_specs of the flavor
+        # TODO(ttsiouts): Here we have to check the extra_specs of the flavor
         resources = {}
         if vcpus > 0:
             resources.update({'VCPU': vcpus})
@@ -83,12 +83,12 @@ class Resources(object):
 
     @staticmethod
     def max_ratio(one, two):
-        res = one/two
+        res = one / two
         return max([ratio for ratio in res.values()])
 
     @staticmethod
     def min_ratio(one, two):
-        res = one/two
+        res = one / two
         return min([ratio for ratio in res.values()])
 
     def __add__(self, other):
@@ -132,18 +132,6 @@ class Resources(object):
         resources = self.resources | other.resources
         return {rc: getattr(self, rc, 0) / getattr(other, rc, 1)
                 for rc in resources}
-
-        #for resource in other.resources:
-        #    if getattr(self, resource, 0) < getattr(other, resource, 0):
-        #        res = 0
-        #    else:
-        #        # NOTE: Careful with the default values of getattr!
-        #        # division with zero :P
-        #        ot = getattr(other, resource, 1) or 1
-        #        res = getattr(self, resource, 0) / ot
-        #    if result == -1 or res < result:
-        #        result = res
-        #return int(result)
 
     def _div_with_int(self, other):
         resources = {}

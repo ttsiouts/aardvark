@@ -45,10 +45,10 @@ class SchedulingEvent(base.NotificationEvent):
     @property
     def aggregates(self):
         try:
-           d = self.request_spec['nova_object.data']['requested_destination']
-           return d['nova_object.data']['aggregates']
+            d = self.request_spec['nova_object.data']['requested_destination']
+            return d['nova_object.data']['aggregates']
         except KeyError:
-           return None
+            return None
 
 
 class InstanceUpdateEvent(base.NotificationEvent):

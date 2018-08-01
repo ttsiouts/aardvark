@@ -17,12 +17,22 @@ from functools import wraps
 from oslo_concurrency import lockutils
 from oslo_log import log
 
-import aardvark.conf
 from aardvark.api.rest import nova
+import aardvark.conf
+from aardvark import exception
 
 
 LOG = log.getLogger(__name__)
 CONF = aardvark.conf.CONF
+
+
+def watermark_enabled(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if CONF.aardvark.enable_watermark_mode:
+            return fn(*args, **kwargs)
+        return None
+    return wrapper
 
 
 def retries(fn):
