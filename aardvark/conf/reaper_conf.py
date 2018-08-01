@@ -85,6 +85,12 @@ For this purpose the Reaper uses OpenStack Taskflow. The two supported
 backends are redis and zookeper.
 """
     ),
+    cfg.StrOpt('backend_host',
+               default='localhost',
+               help="""
+Specifies the host where the job board backend can be found.
+"""
+    ),
 ]
 
 
