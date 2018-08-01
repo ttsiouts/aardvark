@@ -53,7 +53,6 @@ Requires:       python2-oslo-context >= 2.19.2
 Requires:       python2-taskflow >= 2.16.0
 Requires:       python2-stevedore >= 1.20.0
 
-
 %description -n python-%{service}
 %{common_desc}
 
