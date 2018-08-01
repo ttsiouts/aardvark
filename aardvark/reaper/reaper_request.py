@@ -14,11 +14,23 @@
 #    under the License.
 
 
+from aardvark import exception
 from aardvark.objects import resources as resources_obj
+
+
+def request_from_job(request):
+    if request['req_type'] == "ReaperRequest":
+        return ReaperRequest.from_primitive(request)
+    elif request['req_type'] == "StateCalculationRequest":
+        return StateCalculationRequest.from_primitive(request)
+    else:
+        raise exception.UnknownRequestType()
+
 
 class ReaperRequest(object):
 
     def __init__(self, uuids, project_id, resources, image, aggregates=None):
+        self.req_type = self.__class__.__name__
         self.uuids = uuids
         self.image = image
         self.project_id = project_id
@@ -36,9 +48,28 @@ class ReaperRequest(object):
 
     def to_dict(self):
         return {
+            'req_type': self.req_type,
             'uuids': self.uuids,
             'project_id': self.project_id,
             'resources': self.resources.to_dict(),
             'image': self.image,
+            'aggregates': self.aggregates
+        }
+
+
+class StateCalculationRequest(object):
+
+    def __init__(self, aggregates):
+        self.req_type = self.__class__.__name__
+        self.aggregates = aggregates
+
+    @staticmethod
+    def from_primitive(primitive):
+        aggregates = primitive['aggregates']
+        return StateCalculationRequest(aggregates)
+
+    def to_dict(self):
+        return {
+            'req_type': self.req_type,
             'aggregates': self.aggregates
         }

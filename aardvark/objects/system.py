@@ -14,6 +14,7 @@
 #    under the License.
 
 from aardvark.objects import base
+from aardvark.objects import instance
 from aardvark.objects import resource_provider
 from aardvark.objects import project
 from aardvark.objects import resources
@@ -46,6 +47,19 @@ class System(object):
             rp.reinit_object()
 
         return capabilities.Capabilities(used_resources, total_resources)
+
+    def populate_system_rps(self):
+        instance_list = instance.InstanceList()
+        for rp in self.resource_providers:
+            servers = list()
+            for project in self.preemptible_projects:
+                filters = {
+                    'host': rp.name,
+                    'project_id': project.id_,
+                    'vm_state': 'ACTIVE'
+                }
+                servers += instance_list.instances(**filters)
+            rp.preemptible_servers = servers
 
     def empty_cache(self):
         self._rp_list.reinit_object()

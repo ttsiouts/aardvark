@@ -23,6 +23,17 @@ aardvark_group = cfg.OptGroup(
 
 
 aardvark_opts = [
+    cfg.BoolOpt('enable_watermark_mode',
+                default=False,
+                help="""
+Enable watermark mode
+
+If this option is True, a periodic task is added to the reaper service, that
+periodically posts a StateCalculation job in the Reaper's Jobboard. The reaper
+will try to maintain the system usage below the configured limit by 'culling'
+preemptible servers.
+"""
+    ),
     cfg.IntOpt('watermark',
                default=95,
                help="""
@@ -31,6 +42,9 @@ Max usage per resource class.
 Represents the allowed usage percentage for each resource class. As soon as
 the usage overcomes this limit, the service will try to free up resource to
 keep the usage of the resource class below the watermak level.
+
+This is taken under consideration only if the watermark mode is enabled. To
+enable it, set the config option aardvark.enable_watermark_mode to True.
 """
     ),
 ]

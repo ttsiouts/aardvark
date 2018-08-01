@@ -50,3 +50,7 @@ class PreemptibleRequest(ReaperException):
 
 class UnwatchedAggregate(ReaperException):
     message = "Received request for unwatched aggregate."
+
+
+class UnknownRequestType(ReaperException):
+    message = "Received request of unknown type."

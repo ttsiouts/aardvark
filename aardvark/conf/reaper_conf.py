@@ -75,6 +75,16 @@ If the provided list is empty, only one worker will be spawned, responsible for
 the whole system.
 """
     ),
+    cfg.StrOpt('job_backend',
+               default='redis',
+               choices=('redis', 'zookeeper'),
+               help="""
+The backend to use for distributed task management.
+
+For this purpose the Reaper uses OpenStack Taskflow. The two supported
+backends are redis and zookeper.
+"""
+    ),
 ]
 
 

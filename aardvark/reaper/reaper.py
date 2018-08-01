@@ -28,6 +28,7 @@ from aardvark.reaper import reaper_request as rr_obj
 import aardvark.conf
 
 import time
+import functools
 
 from taskflow.jobs import backends
 from taskflow import exceptions as excp
@@ -36,10 +37,13 @@ CONF = aardvark.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
-SHARED_CONF = {
-    'path': "/var/lib/zookeeper",
-    'board': 'zookeeper',
-}
+
+def while_running(fn):
+    @functools.wraps(fn)
+    def wrapper(self, board):
+        while self.flag:
+            fn(self, board)
+    return wrapper
 
 
 class Reaper(object):
@@ -53,89 +57,19 @@ class Reaper(object):
         self.novaclient = nova.novaclient()
 
         self.aggregates = aggregates if aggregates else []
-
-        # Load the configured driver
-        self.driver = driver.DriverManager(
-                "aardvark.reaper.driver",
-                CONF.reaper.reaper_driver,
-                invoke_on_load=True,
-                invoke_args=invoke_args).driver
-        # Load configured notification system in order to notify
+        # TODO: Load configured notification system in order to notify
         # the owner of the server that will be terminated
 
-    def handle_request(self, request):
-        """Main functionality of the Reaper
+    def _load_configured_driver(self, watermark_mode=False):
+        """Loads the configured driver"""
+        return driver.DriverManager(
+            "aardvark.reaper.driver",
+            CONF.reaper.reaper_driver,
+            invoke_on_load=True,
+            invoke_args=tuple([watermark_mode])).driver
 
-        Gathers info and tries to free up the requested resources.
-
-        :param req_spec: the request specification for the spawning server
-        :param resources: the requested resources
-        """
-
-        system = system_obj.System(request.aggregates)
-        slots = 1
-        if not self.watermark_mode:
-            slots = len(request.uuids)
-            preemptible_projects = [
-                project.id_ for project in system.preemptible_projects
-            ]
-            if request.project_id in preemptible_projects:
-                # Make space only if the requesting project is
-                # non-preemptible.
-                raise exception.PreemptibleRequest()
-
-        instance_list = instance.InstanceList()
-
-        for rp in system.resource_providers:
-            servers = list()
-            for project in system.preemptible_projects:
-                filters = {
-                    'host': rp.name,
-                    'project_id': project.id_,
-                    'vm_state': 'ACTIVE'
-                }
-                servers += instance_list.instances(**filters)
-            rp.preemptible_servers = servers
-
-        selected_hosts, selected_servers = \
-            self.driver.get_preemptible_servers(
-                request.resources, system.resource_providers, slots)
-
-        for server in selected_servers:
-            LOG.info("Deleting server: %s" % server.name)
-            self.notify_about_instance(server)
-            self.novaclient.servers.delete(server.uuid)
-
-        # Wait until allocations are removed
-        time.sleep(5)
-
-    def notify_about_instance(self, instance):
-        # notify with the configured notification system before deleting
-        pass
-
-    def job_handler(self):
-        self.flag = True
-        with backends.backend("ReaperBoard", SHARED_CONF.copy()) as board:
-            while self.flag:
-                jobs = board.iterjobs(ensure_fresh=True, only_unclaimed=True)
-                for job in jobs:
-                    request = rr_obj.ReaperRequest.from_primitive(job.details)
-                    if not self._is_aggregate_watched(request.aggregates):
-                        continue
-                    try:
-                        board.claim(job, "worker")
-                        LOG.debug("Claimed %s", job)
-                    except (excp.UnclaimableJob, excp.NotFound):
-                        # Another worker maybe claimed the job. No need to
-                        # take further actions.
-                        continue
-                    else:
-                        self.take_action(request)
-                        board.consume(job, "worker")
-                        LOG.debug("Consumed %s", job)
-        LOG.info("Reaper worker stopped: %s", self.aggregates)
-
-    def take_action(self, request):
+    def evaluate_reaper_request(self, request):
+        # TODO: Rename to handle_request
         # If we receive a request without explicit aggregates
         # set the aggregates of the request to self.aggregates
         # so that we don't invalidate the system state of
@@ -145,11 +79,111 @@ class Reaper(object):
             request.aggregates = self.aggregates
 
         try:
-            self.handle_request(request)
+            self.handle_reaper_request(request)
             self._rebuild_instances(request.uuids, request.image)
         except exception.ReaperException as e:
             LOG.error(e.message)
             self._reset_instances(request.uuids)
+
+    def handle_reaper_request(self, request):
+        """Main functionality of the Reaper
+
+        Gathers info and tries to free up the requested resources.
+
+        :param req_spec: the request specification for the spawning server
+        :param resources: the requested resources
+        """
+
+        system = system_obj.System(request.aggregates)
+
+        slots = len(request.uuids)
+        preemptible_projects = [
+            project.id_ for project in system.preemptible_projects
+        ]
+        if request.project_id in preemptible_projects:
+            # Make space only if the requesting project is
+            # non-preemptible.
+            raise exception.PreemptibleRequest()
+
+        self.free_resources(request.resources, system, slots=slots)
+
+        # Wait until allocations are removed
+        time.sleep(5)
+
+    def handle_state_calculation_request(self, request):
+
+        system = system_obj.System(request.aggregates)
+        system_state = system.system_state()
+
+        LOG.info("Current System usage = %s", system_state.usage())
+        if system_state.usage() > CONF.aardvark.watermark:
+            LOG.info("Over limit, attempting to cleanup")
+            resource_request = system_state.get_excessive_resources(
+                CONF.aardvark.watermark)
+
+            self.free_resources(resource_request, system, watermark_mode=True)
+
+    def free_resources(self, request, system, slots=1, watermark_mode=False):
+
+        system.populate_system_rps()
+        reaper_driver = self._load_configured_driver(
+            watermark_mode=watermark_mode)
+
+        selected_hosts, selected_servers = \
+            reaper_driver.get_preemptible_servers(
+                request, system.resource_providers, slots)
+
+        for server in selected_servers:
+            LOG.info("Deleting server: %s" % server.name)
+            self.notify_about_instance(server)
+            self.novaclient.servers.delete(server.uuid)
+
+    def notify_about_instance(self, instance):
+        # notify with the configured notification system before deleting
+        pass
+
+    def job_handler(self):
+        self.flag = True
+
+        backend_conf = {
+            'board': CONF.reaper.job_backend,
+            'path': "/var/lib/%s" % CONF.reaper.job_backend,
+        }
+
+        with backends.backend("ReaperBoard", backend_conf.copy()) as board:
+            self.attempt_job_claim(board)
+
+        LOG.info("Reaper worker stopped: %s", self.aggregates)
+
+    @while_running
+    def attempt_job_claim(self, board):
+        jobs = board.iterjobs(ensure_fresh=True, only_unclaimed=True)
+        for job in jobs:
+            try:
+                request = rr_obj.request_from_job(job.details)
+                self._check_requested_aggregates(request.aggregates)
+                board.claim(job, "worker")
+                LOG.debug("Claimed %s", job)
+            except exception.UnknownRequestType:
+                continue
+            except exception.UnwatchedAggregate:
+                continue
+            except (excp.UnclaimableJob, excp.NotFound):
+                # Another worker maybe claimed the job. No need to
+                # take further actions.
+                continue
+
+            self.handle_request(request)
+            board.consume(job, "worker")
+            LOG.debug("Consumed %s", job)
+
+    def handle_request(self, request):
+
+        if isinstance(request, rr_obj.ReaperRequest):
+            self.evaluate_reaper_request(request)
+
+        elif isinstance(request, rr_obj.StateCalculationRequest):
+            self.handle_state_calculation_request(request)
 
     def stop_handling(self):
         self.flag = False
@@ -164,7 +198,8 @@ class Reaper(object):
             LOG.info('Resetting server %s to error', uuid)
             self.novaclient.servers.reset_state(uuid)
 
-    def _is_aggregate_watched(self, aggregates):
+    def _check_requested_aggregates(self, aggregates):
         l1 = [agg for agg in self.aggregates if agg in aggregates]
         l2 = [agg for agg in aggregates if agg in self.aggregates]
-        return l1 == l2
+        if l1 != l2:
+            raise exception.UnwatchedAggregate()

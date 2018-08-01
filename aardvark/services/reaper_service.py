@@ -15,19 +15,32 @@
 
 
 import six
+import functools
 
 from oslo_log import log
+from oslo_context import context
 from oslo_service import service
+from oslo_service import periodic_task
 from taskflow.utils import threading_utils
 
 import aardvark.conf
 from aardvark.reaper import reaper
 from aardvark import config
+from aardvark.reaper import job_manager
+from aardvark.reaper import reaper_request as rr_obj
 from aardvark import utils
 
 
 LOG = log.getLogger(__name__)
 CONF = aardvark.conf.CONF
+
+
+def watermark_enabled(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        if CONF.aardvark.enable_watermark_mode:
+            fn(*args, **kwargs)
+    return wrapper
 
 
 class ReaperService(service.Service):
@@ -48,6 +61,7 @@ class ReaperService(service.Service):
     def start(self):
         super(ReaperService, self).start()
         self._start_workers()
+        self._start_state_calculation()
 
     def stop(self, graceful=True):
         self._stop_workers()
@@ -75,6 +89,36 @@ class ReaperService(service.Service):
             instance = reaper.Reaper(aggregates)
             instance.worker = threading_utils.daemon_thread(instance.job_handler)
             self.reaper_instances.append(instance)
+
+    @watermark_enabled
+    def _start_state_calculation(self):
+        self.state_calculator = SystemStateCalculator()
+        LOG.info('Starting Periodic System State Calculation')
+        admin_context = context.get_admin_context()
+        self.tg.add_dynamic_timer(
+            self.state_calculator.periodic_tasks,
+            periodic_interval_max=CONF.periodic_interval,
+            context=admin_context)
+
+
+class SystemStateCalculator(periodic_task.PeriodicTasks):
+
+    def __init__(self):
+        super(SystemStateCalculator, self).__init__(CONF)
+        self.watched_aggregates = utils.map_aggregate_names()
+        self.job_manager = job_manager.JobManager()
+
+    def periodic_tasks(self, context, raise_on_error=False):
+        return self.run_periodic_tasks(context, raise_on_error=raise_on_error)
+
+    @periodic_task.periodic_task(spacing=CONF.periodic_interval,
+                                 run_immediately=True)
+    def calculate_system_state(self, context, startup=True):
+        LOG.debug('Periodic Timer for state check expired ')
+        for aggregates in self.watched_aggregates:
+            request = rr_obj.StateCalculationRequest(aggregates)
+            self.job_manager.post_job(request)
+
 
 def prepare_service(argv=None):
     log.register_options(CONF)

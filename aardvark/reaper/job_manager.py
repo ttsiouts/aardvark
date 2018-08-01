@@ -26,12 +26,6 @@ LOG = logging.getLogger(__name__)
 CONF = aardvark.conf.CONF
 
 
-SHARED_CONF = {
-    'path': "/var/lib/zookeeper",
-    'board': 'zookeeper',
-}
-
-
 class JobManager(object):
 
     board_name = "ReaperBoard"
@@ -60,7 +54,12 @@ class JobManager(object):
                           details.aggregates)
                 raise exception.UnwatchedAggregate()
 
-        with backends.backend(self.board_name, SHARED_CONF.copy()) as board:
+        backend_conf = {
+            'board': CONF.reaper.job_backend,
+            'path': "/var/lib/%s" % CONF.reaper.job_backend,
+        }
+
+        with backends.backend(self.board_name, backend_conf.copy()) as board:
             job = board.post("ReaperJob", book=None, details=details.to_dict())
 
     def _is_aggregate_watched(self, aggregates):
