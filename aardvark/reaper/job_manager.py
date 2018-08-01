@@ -57,6 +57,7 @@ class JobManager(object):
         backend_conf = {
             'board': CONF.reaper.job_backend,
             'path': "/var/lib/%s" % CONF.reaper.job_backend,
+            'host': CONF.reaper.backend_host
         }
 
         with backends.backend(self.board_name, backend_conf.copy()) as board:

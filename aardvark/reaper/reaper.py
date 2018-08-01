@@ -148,6 +148,7 @@ class Reaper(object):
         backend_conf = {
             'board': CONF.reaper.job_backend,
             'path': "/var/lib/%s" % CONF.reaper.job_backend,
+            'host': CONF.reaper.backend_host
         }
 
         with backends.backend("ReaperBoard", backend_conf.copy()) as board:
