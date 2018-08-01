@@ -1,0 +1,132 @@
+#!/bin/bash
+
+
+# ensure we don't re-source this in the same environment
+[[ -z "$_AARDVARK_DEVSTACK_LIB" ]] || return 0
+declare -r -g _AARDVARK_DEVSTACK_LIB=1
+
+# Defaults
+# --------
+
+# Set up default directories
+
+AARDVARK_DIR=$DEST/aardvark
+AARDVARK_DEVSTACK_DIR=$AARDVARK_DIR/devstack
+AARDVARK_DEVSTACK_FILES_DIR=$AARDVARK_DEVSTACK_DIR/files
+AARDVARK_CONF_DIR=${AARDVARK_CONF_DIR:-/etc/aardvark}
+AARDVARK_CONF_FILE=$AARDVARK_CONF_DIR/aardvark.conf
+if [[ -d ${AARDVARK_DIR}/bin ]]; then
+    AARDVARK_BIN_DIR=${AARDVARK_DIR}/bin
+else
+    AARDVARK_BIN_DIR=$(get_python_exec_prefix)
+fi
+
+function install_aardvark {
+    setup_develop $AARDVARK_DIR
+
+    if is_oraclelinux; then
+        install_package redis
+    elif is_fedora || is_suse; then
+        install_package redis
+        sudo systemctl enable redis
+    elif is_ubuntu; then
+        install_package redis
+    else
+        exit_distro_not_supported "redis installation"
+    fi
+
+    start_service redis
+}
+
+
+
+function cleanup_aardvark {
+    sudo rm -rf $AARDVARK_CONF_DIR
+}
+
+# Defaults
+# --------
+
+# create_aardvark_accounts - Set up common required aardvark accounts
+#
+# Project     User       Roles
+# ------------------------------
+# service     aardvark      admin
+function create_aardvark_accounts {
+    create_service_user "aardvark" "admin"
+    get_or_create_service "aardvark" "reaper" "Culling me softly"
+}
+
+
+function configure_aardvark {
+    sudo install -d -o $STACK_USER $AARDVARK_CONF_DIR $STACK_USER
+
+    # Copy over aardvark configuration file and configure common parameters.
+    iniset $AARDVARK_CONF_FILE DEFAULT debug True
+    inicomment $AARDVARK_CONF_FILE DEFAULT log_file
+    iniset $AARDVARK_CONF_FILE DEFAULT use_syslog $SYSLOG
+    iniset $AARDVARK_CONF_FILE DEFAULT host $LOCAL_HOSTNAME
+
+    configure_auth
+
+    iniset $AARDVARK_CONF_FILE reaper reaper_driver chance_driver
+    iniset $AARDVARK_CONF_FILE reaper alternatives 1
+    iniset $AARDVARK_CONF_FILE reaper max_attempts 5
+    iniset $AARDVARK_CONF_FILE reaper watched_aggregates ""
+    iniset $AARDVARK_CONF_FILE reaper job_backend redis
+
+    iniset $AARDVARK_CONF_FILE aardvark enable_watermark_mode False
+    iniset $AARDVARK_CONF_FILE aardvark watermark 95
+    iniset $AARDVARK_CONF_FILE aardvark periodic_interval 60
+
+    iniset $AARDVARK_CONF_FILE notification default_action handled
+    iniset $AARDVARK_CONF_FILE notification urls "rabbit://stackrabbit:password@127.0.0.1:5672/"
+    iniset $AARDVARK_CONF_FILE notification topics versioned_notifications
+    
+}
+
+function configure_auth {
+    iniset $AARDVARK_CONF_FILE placement auth_type password
+    iniset $AARDVARK_CONF_FILE placement auth_url $KEYSTONE_SERVICE_URI
+    iniset $AARDVARK_CONF_FILE placement username aardvark
+    iniset $AARDVARK_CONF_FILE placement password $SERVICE_PASSWORD
+    iniset $AARDVARK_CONF_FILE placement project_name $SERVICE_PROJECT_NAME
+    iniset $AARDVARK_CONF_FILE placement user_domain_id default
+    iniset $AARDVARK_CONF_FILE placement project_domain_id default
+
+    iniset $AARDVARK_CONF_FILE compute auth_type password
+    iniset $AARDVARK_CONF_FILE compute auth_url $KEYSTONE_SERVICE_URI
+    iniset $AARDVARK_CONF_FILE compute username aardvark
+    iniset $AARDVARK_CONF_FILE compute password $SERVICE_PASSWORD
+    iniset $AARDVARK_CONF_FILE compute project_name $SERVICE_PROJECT_NAME
+    iniset $AARDVARK_CONF_FILE compute user_domain_id default
+    iniset $AARDVARK_CONF_FILE compute project_domain_id default
+
+    iniset $AARDVARK_CONF_FILE identity auth_type password
+    iniset $AARDVARK_CONF_FILE identity auth_url $KEYSTONE_SERVICE_URI
+    iniset $AARDVARK_CONF_FILE identity username aardvark
+    iniset $AARDVARK_CONF_FILE identity password $SERVICE_PASSWORD
+    iniset $AARDVARK_CONF_FILE identity project_name $SERVICE_PROJECT_NAME
+    iniset $AARDVARK_CONF_FILE identity user_domain_id default
+    iniset $AARDVARK_CONF_FILE identity project_domain_id default
+}
+
+function start_aardvark {
+    run_process aardvark_reaper "$AARDVARK_BIN_DIR/aardvark_reaper --config-file=$AARDVARK_CONF_FILE"
+    run_process aardvark_notification "$AARDVARK_BIN_DIR/aardvark_notification --config-file=$AARDVARK_CONF_FILE"
+}
+
+function stop_aardvark {
+    stop_process aardvark_reaper
+    stop_process aardvark_notifiaction
+}
+
+
+# Restore xtrace + pipefail
+$_XTRACE_AARDVARK
+$_PIPEFAIL_AARDVARK
+
+# Tell emacs to use shell-script-mode
+## Local variables:
+## mode: shell-script
+## End:
