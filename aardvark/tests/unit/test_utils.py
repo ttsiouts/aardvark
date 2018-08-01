@@ -123,7 +123,7 @@ class UtilsTests(base.TestCase):
         workload = range(1, 11)
         result = serial(workload)
         expected = range(2, 12)
-        self.assertEqual(expected, sorted(result))
+        self.assertEqual(list(expected), sorted(result))
 
     def test_parallelize_with_args(self):
         @utils.parallelize()
@@ -137,7 +137,7 @@ class UtilsTests(base.TestCase):
         workload = range(1, 11)
         result = serial(workload, b)
         expected = zip(range(2, 12), [b + 1] * 10)
-        self.assertEqual(expected, sorted(result))
+        self.assertEqual(list(expected), sorted(result))
 
     def test_parallelize_with_kwargs(self):
         @utils.parallelize()
@@ -151,4 +151,4 @@ class UtilsTests(base.TestCase):
         workload = range(1, 2)
         result = serial(workload, b, c=20)
         expected = zip(range(2, 3), [b + 1], [20])
-        self.assertEqual(expected, sorted(result))
+        self.assertEqual(list(expected), sorted(result))
