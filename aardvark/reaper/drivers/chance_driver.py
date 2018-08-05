@@ -57,7 +57,7 @@ class ChanceDriver(driver.ReaperDriver):
             # resources were freed up in a previous round of selection. If
             # they were free since the beginning, the reaper would not have
             # been triggered.
-            if host not in selected_hosts and servers:
+            if host not in selected_hosts:
                 selected_hosts.append(host)
 
             selected_servers += servers
@@ -115,6 +115,7 @@ class ChanceDriver(driver.ReaperDriver):
         host_resources = driver.host_potential(
             host, resources, not self.watermark_mode)
         if host_resources >= requested:
+            host.reserve_resources(resources, requested)
             return selected
 
         # Shuffle the servers
