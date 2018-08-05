@@ -61,6 +61,13 @@ class ReaperService(service.Service):
         for instance in self.reaper_instances:
             instance.worker.start()
 
+        # Start a periodic task checking the health of the reaper workers
+        self.worker_inspector = ReaperWorkerHealthCheck(self.reaper_instances)
+        LOG.info('Starting Periodic Worker HealthCheck Calculation')
+        self.tg.add_dynamic_timer(
+            self.worker_inspector.periodic_tasks,
+            context=context.get_admin_context())
+
     def _stop_workers(self):
         LOG.info('Stoping Reaper workers')
         for instance in self.reaper_instances:
@@ -108,6 +115,26 @@ class SystemStateCalculator(periodic_task.PeriodicTasks):
         for aggregates in self.watched_aggregates:
             request = rr_obj.StateCalculationRequest(aggregates)
             self.job_manager.post_job(request)
+
+
+class ReaperWorkerHealthCheck(periodic_task.PeriodicTasks):
+
+    def __init__(self, reaper_instances):
+        super(ReaperWorkerHealthCheck, self).__init__(CONF)
+        self.reaper_instances = reaper_instances
+
+    def periodic_tasks(self, context, raise_on_error=False):
+        return self.run_periodic_tasks(context, raise_on_error=raise_on_error)
+
+    @periodic_task.periodic_task(spacing=5, run_immediately=False)
+    def calculate_system_state(self, context, startup=True):
+        LOG.debug('Periodic Timer for worker health check expired')
+        for instance in self.reaper_instances:
+            if not instance.worker.is_alive():
+                LOG.debug('Worker %s, found dead. Reviving!', instance)
+                instance.worker = threading_utils.daemon_thread(
+                instance.job_handler)
+                instance.worker.start()
 
 
 def prepare_service(argv=None):
