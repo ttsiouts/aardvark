@@ -30,7 +30,16 @@ function install_aardvark {
         install_package redis
         sudo systemctl enable redis
     elif is_ubuntu; then
-        install_package redis
+        install_package build-essential
+        install_package tcl
+        curl http://download.redis.io/redis-stable.tar.gz --output ~/redis-stable.tar.gz
+        cd ~
+        tar xzvf redis-stable.tar.gz
+        cd redis-stable
+        make
+        sudo make install
+        sudo cp $AARDVARK_DEVSTACK_DIR/redis.service /etc/systemd/system/redis.service
+        sudo systemctl enable redis
     else
         exit_distro_not_supported "redis installation"
     fi
