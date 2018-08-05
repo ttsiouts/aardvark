@@ -24,6 +24,7 @@ from taskflow.utils import threading_utils
 
 import aardvark.conf
 from aardvark import config
+from aardvark.notifications import manager
 from aardvark.reaper import job_manager
 from aardvark.reaper import reaper
 from aardvark.reaper import reaper_request as rr_obj
@@ -46,14 +47,19 @@ class ReaperService(service.Service):
                 pass
         self.reaper_instances = []
         self._setup_workers(utils.map_aggregate_names())
+        self._setup_notification_manager()
 
     def start(self):
         super(ReaperService, self).start()
         self._start_workers()
         self._start_state_calculation()
+        self._start_notification_handling()
 
     def stop(self, graceful=True):
         self._stop_workers()
+        self._stop_notification_handling()
+        # No need to need to explicitly stop the periodic tasks,
+        # since it is taken care of by the Service.stop()
         super(ReaperService, self).stop(graceful=graceful)
 
     def _start_workers(self):
@@ -68,11 +74,31 @@ class ReaperService(service.Service):
             self.worker_inspector.periodic_tasks,
             context=context.get_admin_context())
 
+    @utils.watermark_enabled
+    def _start_state_calculation(self):
+        self.state_calculator = SystemStateCalculator()
+        LOG.info('Starting Periodic System State Calculation')
+        admin_context = context.get_admin_context()
+        self.tg.add_dynamic_timer(
+            self.state_calculator.periodic_tasks,
+            periodic_interval_max=CONF.aardvark.periodic_interval,
+            context=admin_context)
+
+    @utils.notifications_enabled
+    def _start_notification_handling(self):
+        LOG.info('Starting Notification listener')
+        self.notification_manager.start()
+
     def _stop_workers(self):
         LOG.info('Stoping Reaper workers')
         for instance in self.reaper_instances:
             instance.stop_handling()
             instance.worker.join()
+
+    @utils.notifications_enabled
+    def _stop_notification_handling(self):
+        LOG.info('Stoping Notification listener')
+        self.notification_manager.stop()
 
     def _setup_workers(self, watched_aggregates):
         if len(watched_aggregates) == 0:
@@ -87,15 +113,9 @@ class ReaperService(service.Service):
                 instance.job_handler)
             self.reaper_instances.append(instance)
 
-    @utils.watermark_enabled
-    def _start_state_calculation(self):
-        self.state_calculator = SystemStateCalculator()
-        LOG.info('Starting Periodic System State Calculation')
-        admin_context = context.get_admin_context()
-        self.tg.add_dynamic_timer(
-            self.state_calculator.periodic_tasks,
-            periodic_interval_max=CONF.aardvark.periodic_interval,
-            context=admin_context)
+    @utils.notifications_enabled
+    def _setup_notification_manager(self):
+        self.notification_manager = manager.ListenerManager()
 
 
 class SystemStateCalculator(periodic_task.PeriodicTasks):

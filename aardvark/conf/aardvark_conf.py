@@ -23,6 +23,15 @@ aardvark_group = cfg.OptGroup(
 
 
 aardvark_opts = [
+    cfg.BoolOpt('enable_notification_handling',
+                default=True,
+                help="""
+Enable notification hanlding
+
+If this option is enabled, then the reaper will be triggered by error
+notifications about the scheduling of an instance.
+"""
+    ),
     cfg.BoolOpt('enable_watermark_mode',
                 default=False,
                 help="""

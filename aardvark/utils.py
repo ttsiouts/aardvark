@@ -26,6 +26,15 @@ LOG = log.getLogger(__name__)
 CONF = aardvark.conf.CONF
 
 
+def notifications_enabled(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if CONF.aardvark.enable_notification_handling:
+            return fn(*args, **kwargs)
+        return None
+    return wrapper
+
+
 def watermark_enabled(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
