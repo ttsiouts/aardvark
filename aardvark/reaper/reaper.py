@@ -50,6 +50,8 @@ class Reaper(object):
     def __init__(self, aggregates=None, watermark_mode=False):
         self.watermark_mode = watermark_mode
         self.novaclient = nova.novaclient()
+        self.worker = None
+        self.missed_acks = 0
 
         self.aggregates = aggregates if aggregates else []
         # TODO(ttsiouts): Load configured notification system in order to
@@ -152,6 +154,10 @@ class Reaper(object):
 
     @while_running
     def attempt_job_claim(self, board):
+
+        # Reset the acks in every loop to show you're alive
+        self.missed_acks = 0
+
         jobs = board.iterjobs(ensure_fresh=True, only_unclaimed=True)
         for job in jobs:
             try:

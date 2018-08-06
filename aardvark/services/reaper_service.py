@@ -63,7 +63,7 @@ class ReaperService(service.Service):
 
         # Start a periodic task checking the health of the reaper workers
         self.worker_inspector = ReaperWorkerHealthCheck(self.reaper_instances)
-        LOG.info('Starting Periodic Worker HealthCheck Calculation')
+        LOG.info('Starting Periodic Worker HealthCheck')
         self.tg.add_dynamic_timer(
             self.worker_inspector.periodic_tasks,
             context=context.get_admin_context())
@@ -126,15 +126,32 @@ class ReaperWorkerHealthCheck(periodic_task.PeriodicTasks):
     def periodic_tasks(self, context, raise_on_error=False):
         return self.run_periodic_tasks(context, raise_on_error=raise_on_error)
 
-    @periodic_task.periodic_task(spacing=5, run_immediately=False)
+    @periodic_task.periodic_task(spacing=10, run_immediately=False)
     def calculate_system_state(self, context, startup=True):
         LOG.debug('Periodic Timer for worker health check expired')
+        dead = []
         for instance in self.reaper_instances:
-            if not instance.worker.is_alive():
-                LOG.debug('Worker %s, found dead. Reviving!', instance)
-                instance.worker = threading_utils.daemon_thread(
-                instance.job_handler)
-                instance.worker.start()
+            if not instance.worker.is_alive() or instance.missed_acks > 3:
+                LOG.info('Worker for aggregates %s, found dead.',
+                         instance.aggregates)
+                instance.stop_handling()
+                instance.worker.join(timeout=0.1)
+                dead.append(instance)
+            else:
+                # Each worker will reset this to 0. If the worker is stuck
+                # after 3 periodic checks then it is presumed dead and it's
+                # revived.
+                instance.missed_acks += 1
+
+            for instance in dead:
+                self.reaper_instances.remove(instance)
+                LOG.info('Reviving worker for aggregates %s.',
+                         instance.aggregates)
+                new_instance = reaper.Reaper(instance.aggregates)
+                new_instance.worker = threading_utils.daemon_thread(
+                    new_instance.job_handler)
+                self.reaper_instances.append(new_instance)
+                new_instance.worker.start()
 
 
 def prepare_service(argv=None):
