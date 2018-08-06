@@ -24,6 +24,7 @@ from aardvark.reaper import reaper_request as rr_obj
 from aardvark import utils
 
 import collections
+from novaclient import exceptions as n_exc
 from oslo_log import log as logging
 
 
@@ -107,5 +108,12 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
 
     def _reset_instances(self, uuids):
         for uuid in uuids:
-            LOG.info('Resetting server %s to error', uuid)
-            self.novaclient.servers.reset_state(uuid)
+            try:
+                LOG.info('Trying to reset server %s to error', uuid)
+                self.novaclient.servers.reset_state(uuid)
+            except n_exc.NotFound:
+                # Looks like we were late, and the server is deleted.
+                # Nothing more we can do.
+                LOG.info("Server with uuid: %s, not found.", uuid)
+                continue
+            LOG.info("Request to reset the server %s was sent.", uuid)

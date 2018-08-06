@@ -15,6 +15,7 @@
 
 
 import functools
+from novaclient import exceptions as n_exc
 from stevedore import driver
 import time
 
@@ -23,6 +24,7 @@ import aardvark.conf
 from aardvark import exception
 from aardvark.objects import system as system_obj
 from aardvark.reaper import reaper_request as rr_obj
+from aardvark import utils
 
 from oslo_log import log as logging
 
@@ -119,6 +121,7 @@ class Reaper(object):
 
             self.free_resources(resource_request, system, watermark_mode=True)
 
+    @utils.retries
     def free_resources(self, request, system, slots=1, watermark_mode=False):
 
         system.populate_system_rps()
@@ -130,12 +133,20 @@ class Reaper(object):
                 request, system.resource_providers, slots)
 
         for server in selected_servers:
-            LOG.info("Deleting server: %s", server.name)
-            self.notify_about_instance(server)
-            self.novaclient.servers.delete(server.uuid)
+            try:
+                LOG.info("Trying to delete server: %s", server.name)
+                self.notify_about_instance(server)
+                self.novaclient.servers.delete(server.uuid)
+            except n_exc.NotFound:
+                # One of the selected servers was not found so, we will retry
+                LOG.info("Server %s not found. Retrying.", server.name)
+                # Emptying the cached in order to retry.
+                system.empty_cache()
+                raise exception.RetryException()
 
     def notify_about_instance(self, instance):
-        # notify with the configured notification system before deleting
+        # Notify with the configured notification system before deleting.
+        # Leaving this here as a hook.
         pass
 
     def job_handler(self):
@@ -191,13 +202,27 @@ class Reaper(object):
 
     def _rebuild_instances(self, uuids, image):
         for uuid in uuids:
-            LOG.info("Rebuilding server with uuid: %s", uuid)
-            self.novaclient.servers.rebuild(uuid, image)
+            try:
+                LOG.info("Trying to rebuild server with uuid: %s", uuid)
+                self.novaclient.servers.rebuild(uuid, image)
+            except n_exc.NotFound:
+                # Looks like we were late, and the server is deleted.
+                # Nothing more we can do.
+                LOG.info("Server with uuid: %s, not found.", uuid)
+                continue
+            LOG.info("Request to rebuild the server %s was sent.", uuid)
 
     def _reset_instances(self, uuids):
         for uuid in uuids:
-            LOG.info('Resetting server %s to error', uuid)
-            self.novaclient.servers.reset_state(uuid)
+            try:
+                LOG.info('Trying to reset server %s to error', uuid)
+                self.novaclient.servers.reset_state(uuid)
+            except n_exc.NotFound:
+                # Looks like we were late, and the server is deleted.
+                # Nothing more we can do.
+                LOG.info("Server with uuid: %s, not found.", uuid)
+                continue
+            LOG.info("Request to reset the server %s was sent.", uuid)
 
     def _check_requested_aggregates(self, aggregates):
         l1 = [agg for agg in self.aggregates if agg in aggregates]
