@@ -62,6 +62,7 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
         event = events.InstanceUpdateEvent(payload)
         if event.old_state == 'building' and event.new_state == 'pending':
+            LOG.info("Notification received triggering reaper")
             self.trigger_reaper(
                event.instance_uuid, event.flavor, event.image)
         else:

@@ -37,6 +37,7 @@ class NotificationListener(service.Service):
         self.manager.start()
 
     def stop(self, graceful=True):
+        LOG.info('Stopping Notification listener')
         self.manager.stop()
         super(NotificationListener, self).stop(graceful=graceful)
 
