@@ -167,3 +167,12 @@ class PlacementClient(object):
         url = "/traits"
         response = self._get(url)
         return response['traits']
+
+    @exception_map
+    def get_allocations(self, consumer):
+        """Returns allocations for the provided consumer
+
+        :param consumer: the consumer id to get the allocations for
+        """
+        url = '/allocations/%s' % consumer
+        return self._get(url)
