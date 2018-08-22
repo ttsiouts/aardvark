@@ -126,12 +126,12 @@ class ReaperWorkerHealthCheck(periodic_task.PeriodicTasks):
     def periodic_tasks(self, context, raise_on_error=False):
         return self.run_periodic_tasks(context, raise_on_error=raise_on_error)
 
-    @periodic_task.periodic_task(spacing=10, run_immediately=False)
-    def calculate_system_state(self, context, startup=True):
+    @periodic_task.periodic_task(spacing=20, run_immediately=False)
+    def check_worker_state(self, context, startup=True):
         LOG.debug('Periodic Timer for worker health check expired')
         dead = []
         for instance in self.reaper_instances:
-            if not instance.worker.is_alive() or instance.missed_acks > 3:
+            if not instance.worker.is_alive() or instance.missed_acks > 5:
                 LOG.info('Worker for aggregates %s, found dead.',
                          instance.aggregates)
                 instance.stop_handling()
