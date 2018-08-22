@@ -20,6 +20,7 @@ from stevedore import driver
 import time
 
 from aardvark.api.rest import nova
+from aardvark.api.rest import placement
 import aardvark.conf
 from aardvark import exception
 from aardvark.objects import system as system_obj
@@ -52,6 +53,7 @@ class Reaper(object):
     def __init__(self, aggregates=None, watermark_mode=False):
         self.watermark_mode = watermark_mode
         self.novaclient = nova.novaclient()
+        self.placement = placement.PlacementClient()
         self.worker = None
         self.missed_acks = 0
 
@@ -105,9 +107,6 @@ class Reaper(object):
 
         self.free_resources(request.resources, system, slots=slots)
 
-        # Wait until allocations are removed
-        time.sleep(5)
-
     def handle_state_calculation_request(self, request):
 
         system = system_obj.System(request.aggregates)
@@ -144,6 +143,10 @@ class Reaper(object):
                 system.empty_cache()
                 raise exception.RetryException()
 
+        # We have to wait until the allocations are removed
+        uuids = [s.uuid for s in selected_servers]
+        self.wait_until_allocations_are_deleted(uuids)
+
     def notify_about_instance(self, instance):
         # Notify with the configured notification system before deleting.
         # Leaving this here as a hook.
@@ -168,7 +171,6 @@ class Reaper(object):
 
         # Reset the acks in every loop to show you're alive
         self.missed_acks = 0
-
         jobs = board.iterjobs(ensure_fresh=True, only_unclaimed=True)
         for job in jobs:
             try:
@@ -229,3 +231,29 @@ class Reaper(object):
         l2 = [agg for agg in aggregates if agg in self.aggregates]
         if l1 != l2:
             raise exception.UnwatchedAggregate()
+
+    def wait_until_allocations_are_deleted(self, uuids, timeout=20):
+        """Wait until the allocation is deleted
+
+        Tries to get the allocations of a given instance until it's not found
+        or the timeout exceeds
+        """
+        # Awful way to wait until the allocation is removed.....
+        # Have to live with it for now... If we don't wait here, the claiming
+        # of the resources will most probably fail since placement will not be
+        # updated right away....
+        start = time.time()
+        now = start
+        while now - start <= timeout:
+            not_found = False
+            for uuid in uuids:
+                resp = self.placement.get_allocations(uuid)
+                if resp['allocations'] == {}:
+                    not_found = True
+                    break
+            if not_found:
+                LOG.info('Allocations for %s not found', uuid)
+                uuids.remove(uuid)
+            if len(uuids) == 0:
+                break
+            now = time.time()
