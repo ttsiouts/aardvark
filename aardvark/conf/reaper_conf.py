@@ -67,12 +67,22 @@ Combination of aggregates is a single string with a vertical-line-separated
 aggregate names.
 
 e.g. watched_aggregates={agg_name1},{agg_name2}|{agg_name3}',....
+"""
+    ),
+    cfg.BoolOpt('is_multithreaded',
+                default=False,
+                help="""
+Enable a multithreaded execution of reaper jobs
 
-For each element in the list, a reaper thread will be spawned and the request
-will be forwarded to the responsible worker.
+If not enabled:
+- each job_manager will have an instance of the reaper handling the requests
 
-If the provided list is empty, only one worker will be spawned, responsible for
-the whole system.
+If this option is enabled:
+- taskflow will be used for managing distributed tasks
+- the job managers will post jobs to the taskflow backend
+- for each element in the watched_aggregates list, a reaper worker thread will
+  be spawned
+- the reaper worker threads will claim the jobs from the backend
 """
     ),
     cfg.StrOpt('job_backend',
@@ -83,12 +93,16 @@ The backend to use for distributed task management.
 
 For this purpose the Reaper uses OpenStack Taskflow. The two supported
 backends are redis and zookeper.
+
+Note: This config option will be used, only if reaper.is_multithreaded is True
 """
     ),
     cfg.StrOpt('backend_host',
                default='localhost',
                help="""
 Specifies the host where the job board backend can be found.
+
+Note: This config option will be used, only if reaper.is_multithreaded is True
 """
     ),
 ]

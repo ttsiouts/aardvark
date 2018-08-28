@@ -26,6 +26,15 @@ LOG = log.getLogger(__name__)
 CONF = aardvark.conf.CONF
 
 
+def is_multithreaded(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if CONF.reaper.is_multithreaded:
+            return fn(*args, **kwargs)
+        return None
+    return wrapper
+
+
 def notifications_enabled(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):

@@ -50,8 +50,7 @@ class Reaper(object):
 
     This class decides which preemptible servers have to be terminated.
     """
-    def __init__(self, aggregates=None, watermark_mode=False):
-        self.watermark_mode = watermark_mode
+    def __init__(self, aggregates=None):
         self.novaclient = nova.novaclient()
         self.placement = placement.PlacementClient()
         self.worker = None

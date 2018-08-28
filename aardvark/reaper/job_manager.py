@@ -15,6 +15,7 @@
 
 import aardvark.conf
 from aardvark import exception
+from aardvark.reaper import reaper
 from aardvark import utils
 
 from oslo_log import log as logging
@@ -31,6 +32,7 @@ class JobManager(object):
 
     def __init__(self):
         self.watched_aggregates = []
+
         for aggregates in utils.map_aggregate_names():
             if not isinstance(aggregates, list):
                 aggregates = [aggregates]
@@ -43,16 +45,29 @@ class JobManager(object):
         if [] not in self.watched_aggregates:
             self.watched_aggregates.append([])
 
-    def post_job(self, details):
+        # A reaper instance will be created if we are not in the multithreaded
+        # mode.
+        if not CONF.reaper.is_multithreaded:
+            self.reaper_instance = reaper.Reaper(self.watched_aggregates)
+
+    def post_job(self, request):
         # Make sure that the forwarded requests are for watched
         # aggregates.
-        if not self._is_aggregate_watched(details.aggregates):
+        if not self._is_aggregate_watched(request.aggregates):
             # Skip this check if we have only one worker.
             if self.watched_aggregates != [[]]:
                 LOG.error('Request for not watched aggregate %s ',
-                          details.aggregates)
+                          request.aggregates)
                 raise exception.UnwatchedAggregate()
+        if CONF.reaper.is_multithreaded:
+            self.multithreaded_handling(request)
+        else:
+            self.single_threaded_handling(request)
 
+    def single_threaded_handling(self, request):
+        self.reaper_instance.handle_request(request)
+
+    def multithreaded_handling(self, request):
         backend_conf = {
             'board': CONF.reaper.job_backend,
             'path': "/var/lib/%s" % CONF.reaper.job_backend,
@@ -60,7 +75,7 @@ class JobManager(object):
         }
 
         with backends.backend(self.board_name, backend_conf.copy()) as board:
-            board.post("ReaperJob", book=None, details=details.to_dict())
+            board.post("ReaperJob", book=None, details=request.to_dict())
 
     def _is_aggregate_watched(self, aggregates):
         l1 = [agg for agg in self.watched_aggregates if agg in aggregates]

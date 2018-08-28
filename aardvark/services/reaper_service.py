@@ -62,6 +62,7 @@ class ReaperService(service.Service):
         # since it is taken care of by the Service.stop()
         super(ReaperService, self).stop(graceful=graceful)
 
+    @utils.is_multithreaded
     def _start_workers(self):
         LOG.info('Starting Reaper workers')
         for instance in self.reaper_instances:
@@ -89,6 +90,7 @@ class ReaperService(service.Service):
         LOG.info('Starting Notification listener')
         self.notification_manager.start()
 
+    @utils.is_multithreaded
     def _stop_workers(self):
         LOG.info('Stoping Reaper workers')
         for instance in self.reaper_instances:
@@ -100,6 +102,7 @@ class ReaperService(service.Service):
         LOG.info('Stoping Notification listener')
         self.notification_manager.stop()
 
+    @utils.is_multithreaded
     def _setup_workers(self, watched_aggregates):
         if len(watched_aggregates) == 0:
             LOG.debug('One worker for all infrastructure will be started')
