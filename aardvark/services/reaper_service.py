@@ -126,6 +126,8 @@ class SystemStateCalculator(periodic_task.PeriodicTasks):
     def __init__(self):
         super(SystemStateCalculator, self).__init__(CONF)
         self.watched_aggregates = utils.map_aggregate_names()
+        if self.watched_aggregates == []:
+            self.watched_aggregates = [self.watched_aggregates]
         self.job_manager = job_manager.JobManager()
 
     def periodic_tasks(self, context, raise_on_error=False):
