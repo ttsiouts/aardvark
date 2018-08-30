@@ -24,6 +24,8 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+.stestr/
+.tox
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
