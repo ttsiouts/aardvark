@@ -32,7 +32,12 @@ class AardvarkException(Exception):
 
 class RetryException(AardvarkException):
     """Generic Exception for the retries mechanism"""
-    message = ''
+    message = ""
+
+
+class BadConfigException(AardvarkException):
+    """Generic Exception raised by bad configuration"""
+    message = "Unknown error occurred because of bad configuration"
 
 
 class ReaperException(AardvarkException):

@@ -119,7 +119,7 @@ class Reaper(object):
 
             self.free_resources(resource_request, system, watermark_mode=True)
 
-    @utils.retries
+    @utils.retries()
     def free_resources(self, request, system, slots=1, watermark_mode=False):
 
         system.populate_system_rps()

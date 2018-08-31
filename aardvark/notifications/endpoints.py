@@ -72,7 +72,7 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
             if uuid:
                 LOG.debug("Removed instance %s from instance map", uuid)
 
-    @utils.retries
+    @utils.retries()
     def trigger_reaper(self, uuid, flavor, image):
         try:
             # No default value in order to retry

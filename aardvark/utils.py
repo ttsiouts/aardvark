@@ -53,17 +53,22 @@ def watermark_enabled(fn):
     return wrapper
 
 
-def retries(fn):
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-        retries = 0
-        while retries < 3:
-            try:
-                return fn(*args, **kwargs)
-            except exception.RetryException:
-                retries += 1
-        LOG.error('Execution of %s failed: Retries exceeded!', fn.__name__)
-    return wrapper
+def retries(side_effect=None):
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            retries = 0
+            while retries < 3:
+                try:
+                    return fn(*args, **kwargs)
+                except exception.RetryException:
+                    retries += 1
+            message = 'Execution of %s failed: Retries exceeded!' % fn.__name__
+            if side_effect is not None:
+                raise side_effect(message)
+            LOG.error(message)
+        return wrapper
+    return decorator
 
 
 class SafeDict(dict):
@@ -90,6 +95,10 @@ def map_aggregate_names():
     }
     uuids = []
     for aggregates in CONF.reaper.watched_aggregates:
-        aggregates = aggregates.split('|')
-        uuids.append([aggregate_map[agg.strip()] for agg in aggregates])
+        try:
+            aggregates = aggregates.split('|')
+            uuids.append([aggregate_map[agg.strip()] for agg in aggregates])
+        except KeyError:
+            message = "One of the configured aggregates was not found"
+            raise exception.BadConfigException(message)
     return uuids
