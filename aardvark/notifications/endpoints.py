@@ -46,6 +46,7 @@ class SchedulingEndpoint(base.NotificationEndpoint):
         event = events.SchedulingEvent(payload)
         for uuid in event.instance_uuids:
             instance_map[uuid] = event
+        return self._default_action()
 
 
 class StateUpdateEndpoint(base.NotificationEndpoint):
@@ -71,6 +72,7 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
             uuid = instance_map.pop(event.instance_uuid, None)
             if uuid:
                 LOG.debug("Removed instance %s from instance map", uuid)
+        return self._default_action()
 
     @utils.retries()
     def trigger_reaper(self, uuid, flavor, image):
