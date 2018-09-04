@@ -31,10 +31,10 @@ def host_potential(host, resources, include_free):
 
 
 @six.add_metaclass(abc.ABCMeta)
-class ReaperDriver(object):
-    """The base Reaper Driver class
+class ReaperStrategy(object):
+    """The base Reaper Strategy class
 
-    This is the class that all the Drivers for the Reaper Service have to
+    This is the class that all the Strategies for the Reaper Service have to
     inherit from
     """
 

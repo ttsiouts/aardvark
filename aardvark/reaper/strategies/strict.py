@@ -17,17 +17,17 @@ import itertools
 from oslo_log import log as logging
 
 import aardvark.conf
-from aardvark.reaper import driver
+from aardvark.reaper import strategy
 
 
 LOG = logging.getLogger(__name__)
 CONF = aardvark.conf.CONF
 
 
-class StrictDriver(driver.ReaperDriver):
+class StrictStrategy(strategy.ReaperStrategy):
 
     def __init__(self):
-        super(StrictDriver, self).__init__()
+        super(StrictStrategy, self).__init__()
 
     def get_preemptible_servers(self, requested, hosts, num_instances):
         selected = list()

@@ -23,24 +23,24 @@ reaper_group = cfg.OptGroup(
 
 
 reaper_opts = [
-    cfg.StrOpt('reaper_driver',
-               default='chance_driver',
+    cfg.StrOpt('strategy',
+               default='chance',
                help="""
-The driver that the reaper will use
+The strategy that the reaper will use
 
 Possible choices:
 
-* strict_driver: The purpose of the preemptibles existence is to eliminate the
-                 idling resources. This driver gets all the possible offers
-                 from the relevant hosts and tries to find the best matching
-                 for the requested resources. The best matching offer is the
-                 combination of preemptible servers that leave the least
-                 possible resources unused.
+* strict: The purpose of the preemptibles existence is to eliminate the
+          idling resources. This strategy gets all the possible offers
+          from the relevant hosts and tries to find the best matching
+          for the requested resources. The best matching offer is the
+          combination of preemptible servers that leave the least
+          possible resources unused.
 
-* chance_driver: A valid host is selected randomly and in a number of
-                 preconfigured retries, the driver tries to find the instances
-                 that have to be culled in order to have the requested
-                 resources available.
+* chance: A valid host is selected randomly and in a number of
+          preconfigured retries, the strategy tries to find the instances
+          that have to be culled in order to have the requested
+          resources available.
 """
     ),
     cfg.IntOpt('alternatives',

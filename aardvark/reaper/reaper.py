@@ -60,11 +60,11 @@ class Reaper(object):
         # TODO(ttsiouts): Load configured notification system in order to
         # notify the owner of the server that will be terminated
 
-    def _load_configured_driver(self, watermark_mode=False):
-        """Loads the configured driver"""
+    def _load_configured_strategy(self, watermark_mode=False):
+        """Loads the configured strategy"""
         return driver.DriverManager(
-            "aardvark.reaper.driver",
-            CONF.reaper.reaper_driver,
+            "aardvark.reaper.strategy",
+            CONF.reaper.strategy,
             invoke_on_load=True,
             invoke_args=tuple([watermark_mode])).driver
 
@@ -123,11 +123,11 @@ class Reaper(object):
     def free_resources(self, request, system, slots=1, watermark_mode=False):
 
         system.populate_system_rps()
-        reaper_driver = self._load_configured_driver(
+        reaper_strategy = self._load_configured_strategy(
             watermark_mode=watermark_mode)
 
         selected_hosts, selected_servers = \
-            reaper_driver.get_preemptible_servers(
+            reaper_strategy.get_preemptible_servers(
                 request, system.resource_providers, slots)
 
         for server in selected_servers:

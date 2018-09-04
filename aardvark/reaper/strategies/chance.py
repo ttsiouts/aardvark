@@ -15,7 +15,7 @@
 
 import aardvark.conf
 from aardvark.objects import resources as resources_obj
-from aardvark.reaper import driver
+from aardvark.reaper import strategy
 
 from oslo_log import log as logging
 
@@ -26,10 +26,10 @@ LOG = logging.getLogger(__name__)
 CONF = aardvark.conf.CONF
 
 
-class ChanceDriver(driver.ReaperDriver):
+class ChanceStrategy(strategy.ReaperStrategy):
 
     def __init__(self, watermark_mode=False):
-        super(ChanceDriver, self).__init__(watermark_mode)
+        super(ChanceStrategy, self).__init__(watermark_mode)
 
     def get_preemptible_servers(self, requested, hosts, num_instances):
         """Implements the strategy of freeing up the requested resources.
@@ -83,7 +83,7 @@ class ChanceDriver(driver.ReaperDriver):
         """
         valid_hosts = list()
         for host in hosts:
-            resources = driver.host_potential(
+            resources = strategy.host_potential(
                 host, host.preemptible_resources, not self.watermark_mode)
             if resources >= requested:
                 # Create a list with the hosts that can potentially provide
@@ -112,7 +112,7 @@ class ChanceDriver(driver.ReaperDriver):
         selected = list()
         resources = resources_obj.Resources()
         # If the already available are enough, just return an empty list
-        host_resources = driver.host_potential(
+        host_resources = strategy.host_potential(
             host, resources, not self.watermark_mode)
         if host_resources >= requested:
             host.reserve_resources(resources, requested)
@@ -134,7 +134,7 @@ class ChanceDriver(driver.ReaperDriver):
             selected.append(server)
             resources += server.resources
 
-            host_resources = driver.host_potential(
+            host_resources = strategy.host_potential(
                 host, resources, not self.watermark_mode)
 
             if host_resources >= requested:
