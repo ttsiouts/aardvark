@@ -34,7 +34,7 @@ py35:
     - tags
   script:
     - cd $CI_PROJECT_DIR
-    - tox -epy35
+    - scl enable rh-python35 'tox -epy35'
 
 #rpmbuild:
 #  stage: test
