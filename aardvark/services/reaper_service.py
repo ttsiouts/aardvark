@@ -23,7 +23,6 @@ from oslo_service import service
 from taskflow.utils import threading_utils
 
 import aardvark.conf
-from aardvark import config
 from aardvark.notifications import manager
 from aardvark.reaper import job_manager
 from aardvark.reaper import reaper
@@ -177,13 +176,3 @@ class ReaperWorkerHealthCheck(periodic_task.PeriodicTasks):
                     new_instance.job_handler)
                 self.reaper_instances.append(new_instance)
                 new_instance.worker.start()
-
-
-def prepare_service(argv=None):
-    log.register_options(CONF)
-    log.set_defaults(default_log_levels=CONF.default_log_levels)
-
-    argv = argv or []
-    config.parse_args(argv)
-
-    log.setup(CONF, 'aardvark-reaper')

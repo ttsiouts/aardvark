@@ -17,19 +17,34 @@
 import sys
 
 from oslo_config import cfg
+from oslo_log import log
 from oslo_service import service
 
-from aardvark.services import reaper_service
+from aardvark import config
 
 
 CONF = cfg.CONF
+LOG = log.getLogger(__name__)
 
 
 def main():
     # Parse config file and command line options, then start logging
-    reaper_service.prepare_service(sys.argv)
+    prepare_service(sys.argv)
 
+    # Importing after the config is parsed in order to correctly pass
+    # the config option to all decorators
+    from aardvark.services import reaper_service
     reaper = reaper_service.ReaperService()
 
     launcher = service.launch(CONF, reaper, restart_method='mutate')
     launcher.wait()
+
+
+def prepare_service(argv=None):
+    log.register_options(CONF)
+    log.set_defaults(default_log_levels=CONF.default_log_levels)
+
+    argv = argv or []
+    config.parse_args(argv)
+
+    log.setup(CONF, 'aardvark-reaper')
