@@ -84,12 +84,12 @@ class Resources(object):
     @staticmethod
     def max_ratio(one, two):
         res = one / two
-        return max([ratio for ratio in res.values()])
+        return int(max([ratio for ratio in res.values()]))
 
     @staticmethod
     def min_ratio(one, two):
         res = one / two
-        return min([ratio for ratio in res.values()])
+        return int(min([ratio for ratio in res.values()]))
 
     def __add__(self, other):
         resources = self.resources | other.resources

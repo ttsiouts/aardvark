@@ -78,6 +78,8 @@ class JobManager(object):
             board.post("ReaperJob", book=None, details=request.to_dict())
 
     def _is_aggregate_watched(self, aggregates):
-        l1 = [agg for agg in self.watched_aggregates if agg in aggregates]
-        l2 = [agg for agg in aggregates if agg in self.watched_aggregates]
-        return l1 == l2
+        if self.watched_aggregates == []:
+            return
+        for aggregate in aggregates:
+            if aggregate not in self.watched_aggregates:
+                raise exception.UnwatchedAggregate()

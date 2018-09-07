@@ -26,8 +26,8 @@ CONF = aardvark.conf.CONF
 
 class StrictStrategy(strategy.ReaperStrategy):
 
-    def __init__(self):
-        super(StrictStrategy, self).__init__()
+    def __init__(self, watermark_mode):
+        super(StrictStrategy, self).__init__(watermark_mode=watermark_mode)
 
     def get_preemptible_servers(self, requested, hosts, num_instances):
         selected = list()

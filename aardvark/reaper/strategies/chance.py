@@ -29,7 +29,7 @@ CONF = aardvark.conf.CONF
 class ChanceStrategy(strategy.ReaperStrategy):
 
     def __init__(self, watermark_mode=False):
-        super(ChanceStrategy, self).__init__(watermark_mode)
+        super(ChanceStrategy, self).__init__(watermark_mode=watermark_mode)
 
     def get_preemptible_servers(self, requested, hosts, num_instances):
         """Implements the strategy of freeing up the requested resources.

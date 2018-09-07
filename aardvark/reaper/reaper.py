@@ -80,7 +80,7 @@ class Reaper(object):
         try:
             self.handle_reaper_request(request)
             self._rebuild_instances(request.uuids, request.image)
-        except exception.ReaperException as e:
+        except exception.AardvarkException as e:
             LOG.error(e.message)
             self._reset_instances(request.uuids)
 
@@ -117,9 +117,15 @@ class Reaper(object):
             resource_request = system_state.get_excessive_resources(
                 CONF.aardvark.watermark)
 
-            self.free_resources(resource_request, system, watermark_mode=True)
+            try:
+                self.free_resources(resource_request, system,
+                                    watermark_mode=True)
+            except exception.RetriesExceeded:
+                LOG.error("Retries exceeded while freeing resources to "
+                          "maintain system usage below %s%. Aborting.",
+                          CONF.aardvark.watermark)
 
-    @utils.retries()
+    @utils.retries(exception.RetriesExceeded)
     def free_resources(self, request, system, slots=1, watermark_mode=False):
 
         system.populate_system_rps()
@@ -226,10 +232,11 @@ class Reaper(object):
             LOG.info("Request to reset the server %s was sent.", uuid)
 
     def _check_requested_aggregates(self, aggregates):
-        l1 = [agg for agg in self.aggregates if agg in aggregates]
-        l2 = [agg for agg in aggregates if agg in self.aggregates]
-        if l1 != l2:
-            raise exception.UnwatchedAggregate()
+        if self.aggregates == []:
+            return
+        for aggregate in aggregates:
+            if aggregate not in self.aggregates:
+                raise exception.UnwatchedAggregate()
 
     def wait_until_allocations_are_deleted(self, uuids, timeout=20):
         """Wait until the allocation is deleted

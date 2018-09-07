@@ -35,6 +35,11 @@ class RetryException(AardvarkException):
     message = ""
 
 
+class RetriesExceeded(AardvarkException):
+    """Exception raised optionally from the retries mechanism"""
+    message = ""
+
+
 class BadConfigException(AardvarkException):
     """Generic Exception raised by bad configuration"""
     message = "Unknown error occurred because of bad configuration"
