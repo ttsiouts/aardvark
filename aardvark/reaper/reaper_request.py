@@ -56,6 +56,14 @@ class ReaperRequest(object):
             'aggregates': self.aggregates
         }
 
+    def __eq__(self, other):
+        return (self.aggregates == other.aggregates
+            and self.uuids == other.uuids
+            and self.image == other.image
+            and self.project_id == other.project_id
+            and self.resources == other.resources
+        )
+
 
 class StateCalculationRequest(object):
 
@@ -73,3 +81,8 @@ class StateCalculationRequest(object):
             'req_type': self.req_type,
             'aggregates': self.aggregates
         }
+
+    def __eq__(self, other):
+        return (self.aggregates == other.aggregates
+            and self.req_type == other.req_type
+        )

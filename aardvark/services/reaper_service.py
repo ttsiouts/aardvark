@@ -156,7 +156,7 @@ class ReaperWorkerHealthCheck(periodic_task.PeriodicTasks):
         dead = []
         for instance in self.reaper_instances:
             if not instance.worker.is_alive() or instance.missed_acks > 5:
-                LOG.info('Worker for aggregates %s, found dead.',
+                LOG.error('Worker for aggregates %s, found dead.',
                          instance.aggregates)
                 instance.stop_handling()
                 instance.worker.join(timeout=0.1)
@@ -167,12 +167,12 @@ class ReaperWorkerHealthCheck(periodic_task.PeriodicTasks):
                 # revived.
                 instance.missed_acks += 1
 
-            for instance in dead:
-                self.reaper_instances.remove(instance)
-                LOG.info('Reviving worker for aggregates %s.',
-                         instance.aggregates)
-                new_instance = reaper.Reaper(instance.aggregates)
-                new_instance.worker = threading_utils.daemon_thread(
-                    new_instance.job_handler)
-                self.reaper_instances.append(new_instance)
-                new_instance.worker.start()
+        for instance in dead:
+            self.reaper_instances.remove(instance)
+            LOG.info('Reviving worker for aggregates %s.',
+                     instance.aggregates)
+            new_instance = reaper.Reaper(instance.aggregates)
+            new_instance.worker = threading_utils.daemon_thread(
+                new_instance.job_handler)
+            self.reaper_instances.append(new_instance)
+            new_instance.worker.start()
