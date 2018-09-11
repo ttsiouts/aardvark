@@ -102,6 +102,23 @@ class StateUpdateEndpointTests(EndpointsTests):
     def _init_mocked_endpoint(self, mock_job_manager, mock_novaclient):
         return endpoints.StateUpdateEndpoint()
 
+    def test_requeue_on_missing_scheduling_info(self):
+        instance = "instance_uuid"
+        new_state = "pending"
+        old_state = "building"
+        image_uuid = "image_uuid"
+        flavor_uuid = "flavor_uuid"
+
+        scheduling_payload = fakes.make_scheduling_payload([instance])
+        payload = fakes.make_state_update_payload(
+            instance, new_state, old_state, image_uuid, flavor_uuid)
+        endpoints.instance_map[instance] = scheduling_payload
+
+        with mock.patch.object(self.endpoint, 'trigger_reaper') as trigger:
+            trigger.side_effect = exception.RetriesExceeded
+            action = self.endpoint.info(None, None, None, payload, None)
+            self.assertEqual(self.endpoint.requeue(), action)
+
     def test_not_to_pending(self):
         instance = "instance_uuid"
         new_state = "error"

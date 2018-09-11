@@ -64,8 +64,13 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
         event = events.InstanceUpdateEvent(payload)
         if event.is_failed_build() or event.is_failed_rebuild():
             event_type = "build" if event.is_failed_build() else "rebuild"
-            self.trigger_reaper(
-                event.instance_uuid, event.flavor, event.image, event_type)
+            try:
+                self.trigger_reaper(
+                    event.instance_uuid, event.flavor, event.image, event_type)
+            except exception.RetriesExceeded:
+                LOG.debug("Requeue the notification. Another instance of the "
+                          "reaper has the required scheduling information")
+                return self.requeue()
         else:
             # Pop instance info from the instance_map in case this is about
             # another state transition.
@@ -74,13 +79,14 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
                 LOG.debug("Removed instance %s from instance map", uuid)
         return self._default_action()
 
-    @utils.retries()
+    @utils.retries(exception.RetriesExceeded)
     def trigger_reaper(self, uuid, flavor, image, event_type):
         try:
             # No default value in order to retry
             info = instance_map.pop(uuid)
         except KeyError:
             # Maybe there is a race. Raising RetryException to rerty
+            LOG.debug('Retrying to retrieve info for uuid <%s>', uuid)
             raise exception.RetryException()
 
         LOG.info("Notification received for uuid: %s event type: %s",

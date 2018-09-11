@@ -35,9 +35,15 @@ class NotificationEndpoint(object):
 
     def _default_action(self, *args, **kwargs):
         if CONF.notification.default_action == "requeue":
-            return oslo_messaging.NotificationResult.REQUEUE
+            return self.requeue()
         if CONF.notification.default_action == "handled":
-            return oslo_messaging.NotificationResult.HANDLED
+            return self.handled()
+
+    def requeue(self):
+        return oslo_messaging.NotificationResult.REQUEUE
+
+    def handled(self):
+        return oslo_messaging.NotificationResult.HANDLED
 
     audit = _default_action
     critical = _default_action
