@@ -62,10 +62,10 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
 
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
         event = events.InstanceUpdateEvent(payload)
-        if event.old_state == 'building' and event.new_state == 'pending':
-            LOG.info("Notification received triggering reaper")
+        if event.is_failed_build() or event.is_failed_rebuild():
+            event_type = "build" if event.is_failed_build() else "rebuild"
             self.trigger_reaper(
-               event.instance_uuid, event.flavor, event.image)
+                event.instance_uuid, event.flavor, event.image, event_type)
         else:
             # Pop instance info from the instance_map in case this is about
             # another state transition.
@@ -75,7 +75,7 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
         return self._default_action()
 
     @utils.retries()
-    def trigger_reaper(self, uuid, flavor, image):
+    def trigger_reaper(self, uuid, flavor, image, event_type):
         try:
             # No default value in order to retry
             info = instance_map.pop(uuid)
@@ -83,6 +83,8 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
             # Maybe there is a race. Raising RetryException to rerty
             raise exception.RetryException()
 
+        LOG.info("Notification received for uuid: %s event type: %s",
+                 uuid, event_type)
         # Enrich the request with info from the instance_map
         request = resources_obj.Resources.obj_from_payload(flavor)
 

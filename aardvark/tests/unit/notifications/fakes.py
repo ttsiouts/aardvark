@@ -29,12 +29,14 @@ def make_scheduling_payload(instance_uuids, aggregates=None, req_id=1,
 
 
 def make_state_update_payload(instance_uuid, state, old_state, image_uuid,
-                              flavor_uuid):
+                              flavor_uuid, old_task=None, new_task=None):
 
     state_update = {
         "nova_object.data": {
            "state": state,
-           "old_state": old_state
+           "old_state": old_state,
+           "new_task_state": new_task,
+           "old_task_state": old_task
         }
     }
 

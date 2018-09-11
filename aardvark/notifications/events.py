@@ -79,3 +79,19 @@ class InstanceUpdateEvent(base.NotificationEvent):
     @property
     def flavor(self):
         return self.payload['nova_object.data']['flavor']['nova_object.data']
+
+    @property
+    def old_task_state(self):
+        return self.state_update['nova_object.data']['old_task_state']
+
+    @property
+    def new_task_state(self):
+        return self.state_update['nova_object.data']['new_task_state']
+
+    def is_failed_build(self):
+        return self.old_state == 'building' and self.new_state == 'pending'
+
+    def is_failed_rebuild(self):
+        return (self.new_state == 'pending'
+            and self.old_task_state == 'rebuilding'
+            and self.new_task_state is None)

@@ -119,12 +119,13 @@ class StateUpdateEndpointTests(EndpointsTests):
             self.assertTrue(instance not in endpoints.instance_map)
             self.assertTrue(not trigger.called)
 
-    def test_payload_to_pending(self):
+    def test_payload_build_to_pending(self):
         instance = "instance_uuid"
         new_state = "pending"
         old_state = "building"
         image_uuid = "image_uuid"
         flavor_uuid = "flavor_uuid"
+        e_type = "build"
 
         scheduling_payload = fakes.make_scheduling_payload([instance])
         payload = fakes.make_state_update_payload(
@@ -135,8 +136,31 @@ class StateUpdateEndpointTests(EndpointsTests):
 
         with mock.patch.object(self.endpoint, 'trigger_reaper') as trigger:
             self.endpoint.info(None, None, None, payload, None)
-            trigger.assert_called_once()
-            trigger.assert_called_with(instance, flavor, image_uuid)
+            trigger.assert_called_once_with(
+                instance, flavor, image_uuid, e_type)
+
+    def test_payload_rebuild_to_pending(self):
+        instance = "instance_uuid"
+        new_state = "pending"
+        old_state = "whatever"
+        old_task = "rebuilding"
+        new_task = None
+        image_uuid = "image_uuid"
+        flavor_uuid = "flavor_uuid"
+        e_type = "rebuild"
+
+        scheduling_payload = fakes.make_scheduling_payload([instance])
+        payload = fakes.make_state_update_payload(
+            instance, new_state, old_state, image_uuid, flavor_uuid,
+            old_task=old_task, new_task=new_task)
+        endpoints.instance_map[instance] = scheduling_payload
+
+        flavor = payload['nova_object.data']['flavor']['nova_object.data']
+
+        with mock.patch.object(self.endpoint, 'trigger_reaper') as trigger:
+            self.endpoint.info(None, None, None, payload, None)
+            trigger.assert_called_once_with(
+                instance, flavor, image_uuid, e_type)
 
     def test_trigger_reaper(self):
         instance = "instance_uuid"
@@ -144,6 +168,7 @@ class StateUpdateEndpointTests(EndpointsTests):
         old_state = "building"
         image_uuid = "image_uuid"
         flavor_uuid = "flavor_uuid"
+        e_type = "build"
 
         scheduling_payload = fakes.make_scheduling_payload([instance])
         scheduling_event = events.SchedulingEvent(scheduling_payload)
@@ -152,7 +177,7 @@ class StateUpdateEndpointTests(EndpointsTests):
         endpoints.instance_map[instance] = scheduling_event
         flavor = payload['nova_object.data']['flavor']['nova_object.data']
 
-        self.endpoint.trigger_reaper(instance, flavor, image_uuid)
+        self.endpoint.trigger_reaper(instance, flavor, image_uuid, e_type)
         self.assertEqual(len(self.endpoint.bundled_reqs.keys()), 0)
         self.assertTrue(instance not in endpoints.instance_map)
         self.assertTrue(self.endpoint.job_manager.post_job.called)
@@ -164,6 +189,7 @@ class StateUpdateEndpointTests(EndpointsTests):
         image_uuid = "image_uuid"
         flavor_uuid = "flavor_uuid"
         request_id = 123
+        e_type = "build"
 
         scheduling_payload = fakes.make_scheduling_payload(instances,
                                                            req_id=request_id)
@@ -174,14 +200,14 @@ class StateUpdateEndpointTests(EndpointsTests):
         endpoints.instance_map[instances[1]] = scheduling_event
         flavor = payload['nova_object.data']['flavor']['nova_object.data']
 
-        self.endpoint.trigger_reaper(instances[0], flavor, image_uuid)
+        self.endpoint.trigger_reaper(instances[0], flavor, image_uuid, e_type)
         self.assertTrue(request_id in self.endpoint.bundled_reqs)
         self.assertTrue(instances[0] not in endpoints.instance_map)
         self.assertEqual(
             [instances[0]], self.endpoint.bundled_reqs[request_id])
         self.assertTrue(not self.endpoint.job_manager.post_job.called)
 
-        self.endpoint.trigger_reaper(instances[1], flavor, image_uuid)
+        self.endpoint.trigger_reaper(instances[1], flavor, image_uuid, e_type)
         self.assertTrue(request_id not in self.endpoint.bundled_reqs)
         self.endpoint.job_manager.post_job.assert_called_once()
 
@@ -191,6 +217,7 @@ class StateUpdateEndpointTests(EndpointsTests):
         old_state = "building"
         image_uuid = "image_uuid"
         flavor_uuid = "flavor_uuid"
+        event_type = "build"
 
         scheduling_payload = fakes.make_scheduling_payload([instance])
         scheduling_event = events.SchedulingEvent(scheduling_payload)
@@ -201,7 +228,7 @@ class StateUpdateEndpointTests(EndpointsTests):
 
         self.endpoint.job_manager.post_job.side_effect = \
             exception.ReaperException()
-        self.endpoint.trigger_reaper(instance, flavor, image_uuid)
+        self.endpoint.trigger_reaper(instance, flavor, image_uuid, event_type)
         self.assertEqual(len(self.endpoint.bundled_reqs.keys()), 0)
         self.assertTrue(instance not in endpoints.instance_map)
         self.endpoint.novaclient.servers.reset_state.assert_called_once()
