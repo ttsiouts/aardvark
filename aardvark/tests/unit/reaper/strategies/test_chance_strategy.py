@@ -73,6 +73,28 @@ class ChanceStrategyTests(base.BaseTestCase):
             strategy.watermark_mode = True
             self.assertEqual([hosts[1]], strategy.choose_host(hosts, request))
 
+    def test_choose_host_not_equal_resources(self):
+        strategy = chance.ChanceStrategy(watermark_mode=False)
+
+        pre1 = object_fakes.make_resources(vcpu=3, disk=10)
+        free1 = object_fakes.make_resources(vcpu=1, memory=512, disk=10)
+
+        pre2 = object_fakes.make_resources(vcpu=4, memory=1024, disk=20)
+        free2 = object_fakes.make_resources()
+
+        hosts = [
+            mock.Mock(free_resources=free1, preemptible_resources=pre1),
+            mock.Mock(free_resources=free2, preemptible_resources=pre2)
+        ]
+
+        request = object_fakes.make_resources(vcpu=4)
+
+        with mock.patch('random.choice') as mocked:
+            mocked.side_effect = mocked_random
+            self.assertEqual(hosts, strategy.choose_host(hosts, request))
+            strategy.watermark_mode = True
+            self.assertEqual([hosts[1]], strategy.choose_host(hosts, request))
+
     def test_select_servers(self):
         strategy = chance.ChanceStrategy(watermark_mode=True)
 

@@ -85,7 +85,7 @@ class ChanceStrategy(strategy.ReaperStrategy):
         for host in hosts:
             resources = strategy.host_potential(
                 host, host.preemptible_resources, not self.watermark_mode)
-            if resources >= requested:
+            if requested <= resources:
                 # Create a list with the hosts that can potentially provide
                 # the requested resources.
                 valid_hosts.append(host)
@@ -114,7 +114,7 @@ class ChanceStrategy(strategy.ReaperStrategy):
         # If the already available are enough, just return an empty list
         host_resources = strategy.host_potential(
             host, resources, not self.watermark_mode)
-        if host_resources >= requested:
+        if requested <= host_resources:
             host.reserve_resources(resources, requested)
             return selected
 

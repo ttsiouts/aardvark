@@ -104,3 +104,22 @@ class ResourcesTests(base.BaseTestCase):
         # expected = 2
         # self.assertTrue(res1 / res2 == expected)
         pass
+
+    def test_comparisons(self):
+        res1 = fakes.make_resources(vcpu=1, memory=512)
+        res2 = fakes.make_resources(memory=512)
+        self.assertTrue(res1 >= res2)
+        self.assertTrue(not res1 <= res2)
+        self.assertTrue(not res1 < res2)
+
+        res1 = fakes.make_resources(memory=512)
+        res2 = fakes.make_resources(vcpu=1, memory=512)
+        self.assertTrue(res1 <= res2)
+        self.assertTrue(res1 >= res2)
+        self.assertTrue(not res1 < res2)
+
+        res1 = fakes.make_resources()
+        res2 = fakes.make_resources()
+        self.assertTrue(res1 >= res2)
+        self.assertTrue(res1 <= res2)
+        self.assertTrue(res1 == res2)

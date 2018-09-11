@@ -20,11 +20,10 @@ class Resources(object):
     Just a helper class that enables the reaper to make simple calculations
     with resources.
     """
-    # NOTE(ttsiouts): Be careful when comparing! Use comparisons for their
-    # actual meaning and don't make assumptions
-    # Can end up with strange results because the objects are NOT numbers:
+    # NOTE(ttsiouts): Be careful when comparing! Use comparisons only from the
+    # pov of the first operand!!!!!
     # e.g. a = {vcpu: 3, memory: 1024}, b = {vcpu: 2, memory: 512}
-    # a < b = False and a > b = False and a == b = False
+    # a < b => False and a > b => True and a == b => False
 
     def __init__(self, resources=None):
         """Initialized with a dictionary of resource classes and values"""
@@ -140,41 +139,34 @@ class Resources(object):
         return Resources(resources)
 
     def __eq__(self, other):
-        resources = self.resources | other.resources
-        for res in resources:
-            if getattr(self, res, 0) != getattr(other, res, 0):
-                return False
-        return True
+        return all([
+            getattr(self, r) == getattr(other, r, 0) for r in self.resources
+        ])
 
     def __ne__(self, other):
-        return not self == other
+        return any([
+            getattr(self, r) != getattr(other, r, 0) for r in self.resources
+        ])
 
     def __gt__(self, other):
-        resp = True
-        for res in self.resources:
-            resp = resp and getattr(self, res) > getattr(other, res, 0)
-        return resp
+        return all([
+            getattr(self, r) > getattr(other, r, 0) for r in self.resources
+        ])
 
     def __lt__(self, other):
-        resp = True
-        for res in self.resources:
-            resp = resp and getattr(self, res) < getattr(other, res, 0)
-        return resp
+        return all([
+            getattr(self, r) < getattr(other, r, 0) for r in self.resources
+        ])
 
     def __ge__(self, other):
-        resp = True
-        if not self.resources:
-            return False
-
-        for res in self.resources:
-            resp = resp and getattr(self, res) >= getattr(other, res, 0)
-        return resp
+        return all([
+            getattr(self, r) >= getattr(other, r, 0) for r in self.resources
+        ])
 
     def __le__(self, other):
-        resp = True
-        for res in self.resources:
-            resp = resp and getattr(self, res) <= getattr(other, res, 0)
-        return resp
+        return all([
+            getattr(self, r) <= getattr(other, r, 0) for r in self.resources
+        ])
 
     __truediv__ = __div__
 
