@@ -15,6 +15,7 @@
 
 from keystoneauth1 import exceptions as keystone_exc
 from keystoneauth1 import loading as keystone_loading
+import random
 
 import aardvark.conf
 
@@ -94,6 +95,7 @@ class PlacementClient(object):
             filter_str = "?member_of=in:" + ','.join(aggregates)
         url = '/resource_providers%s' % filter_str
         resource_providers = self._get(url)
+        random.shuffle(resource_providers['resource_providers'])
         return resource_providers['resource_providers']
 
     @exception_map
