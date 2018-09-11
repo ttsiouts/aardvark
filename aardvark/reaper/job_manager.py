@@ -53,12 +53,7 @@ class JobManager(object):
     def post_job(self, request):
         # Make sure that the forwarded requests are for watched
         # aggregates.
-        if not self._is_aggregate_watched(request.aggregates):
-            # Skip this check if we have only one worker.
-            if self.watched_aggregates != [[]]:
-                LOG.error('Request for not watched aggregate %s ',
-                          request.aggregates)
-                raise exception.UnwatchedAggregate()
+        self._is_aggregate_watched(request.aggregates)
         if CONF.reaper.is_multithreaded:
             self.multithreaded_handling(request)
         else:
@@ -78,8 +73,10 @@ class JobManager(object):
             board.post("ReaperJob", book=None, details=request.to_dict())
 
     def _is_aggregate_watched(self, aggregates):
-        if self.watched_aggregates == []:
+        if self.watched_aggregates == [[]]:
             return
         for aggregate in aggregates:
             if aggregate not in self.watched_aggregates:
+                LOG.error('Request for not watched aggregate %s', aggregate)
                 raise exception.UnwatchedAggregate()
+        return
