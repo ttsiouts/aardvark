@@ -50,6 +50,7 @@ class JobManager(object):
         if not CONF.reaper.is_multithreaded:
             self.reaper_instance = reaper.Reaper(self.watched_aggregates)
 
+    @utils.timeit
     def post_job(self, request):
         # Make sure that the forwarded requests are for watched
         # aggregates.

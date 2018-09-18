@@ -109,7 +109,8 @@ class ReaperTests(base.BaseTestCase):
             self.assertTrue(not mocked.called)
 
     def test_free_resources(self):
-        system = mock.Mock()
+        mock_projects = [mock.Mock(id_=1), mock.Mock(id_=2)]
+        system = mock.Mock(preemptible_projects=mock_projects)
         request = fakes.make_reaper_request()
         hosts = ['host1']
         servers = [mock.Mock(uuid='server1'), mock.Mock(uuid='server2')]
@@ -129,7 +130,8 @@ class ReaperTests(base.BaseTestCase):
             ], any_order=True)
 
     def test_free_resources_not_found_server(self):
-        system = mock.Mock()
+        mock_projects = [mock.Mock(id_=1), mock.Mock(id_=2)]
+        system = mock.Mock(preemptible_projects=mock_projects)
         request = fakes.make_reaper_request()
         self.reaper.novaclient.servers.delete.side_effect = n_exc.NotFound("")
         hosts = ['host1']

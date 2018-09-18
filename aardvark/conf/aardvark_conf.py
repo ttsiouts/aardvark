@@ -62,6 +62,14 @@ enable it, set the config option aardvark.enable_watermark_mode to True.
 Default interval (in seconds) for running periodic tasks.
 """
     ),
+    cfg.BoolOpt('benchmarking_mode',
+                default=False,
+                help="""
+Enable benchmarking mode
+
+Print out the time it takes to execute critical sections of the code.
+"""
+    ),
 ]
 
 

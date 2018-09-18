@@ -78,3 +78,82 @@ class UtilsTests(base.BaseTestCase):
 
         self.assertRaises(exception.BadConfigException,
                           utils.map_aggregate_names)
+
+    def test_workload_split(self):
+
+        def assert_gen(expected, actual):
+            for exp, act in zip(expected, actual):
+                self.assertEqual(exp, tuple(act))
+            self.assertEqual(len(expected), len(tuple(actual)))
+
+        load = range(1, 14)
+        num_workers = 15
+        expected = [(1,), (2,), (3,), (4,), (5,), (6,), (7,), (8,), (9,),
+                    (10,), (11,), (12,), (13,)]
+        assert_gen(expected, utils.split_workload(num_workers, load))
+
+        load = range(1, 5)
+        num_workers = 2
+        expected = [(1, 2), (3, 4)]
+        assert_gen(expected, utils.split_workload(num_workers, load))
+
+        load = range(1, 6)
+        num_workers = 6
+        expected = [(1,), (2,), (3,), (4,), (5,)]
+        assert_gen(expected, utils.split_workload(num_workers, load))
+
+        load = range(1, 6)
+        num_workers = 2
+        expected = [(1, 2, 3), (4, 5)]
+        assert_gen(expected, utils.split_workload(num_workers, load))
+
+        load = [1, 2]
+        num_workers = 7
+        expected = [(1,), (2,)]
+        assert_gen(expected, utils.split_workload(num_workers, load))
+
+        load = range(1, 10)
+        num_workers = 7
+        expected = [(1, 2), (3, 4), (5, 6), (7, 8), (9,)]
+        assert_gen(expected, utils.split_workload(num_workers, load))
+
+    def test_parallelize_no_args(self):
+        @utils.parallelize()
+        def serial(a):
+            c = []
+            for b in a:
+                c.append(b + 1)
+            return c
+
+        workload = range(1, 11)
+        result = serial(workload)
+        expected = range(2, 12)
+        self.assertEqual(expected, sorted(result))
+
+    def test_parallelize_with_args(self):
+        @utils.parallelize()
+        def serial(a, b):
+            c = []
+            for d in a:
+                c.append((d + 1, b + 1))
+            return c
+
+        b = 1
+        workload = range(1, 11)
+        result = serial(workload, b)
+        expected = zip(range(2, 12), [b + 1] * 10)
+        self.assertEqual(expected, sorted(result))
+
+    def test_parallelize_with_kwargs(self):
+        @utils.parallelize()
+        def serial(a, b, c=None):
+            d = []
+            for e in a:
+                d.append((e + 1, b + 1, c))
+            return d
+
+        b = 1
+        workload = range(1, 2)
+        result = serial(workload, b, c=20)
+        expected = zip(range(2, 3), [b + 1], [20])
+        self.assertEqual(expected, sorted(result))

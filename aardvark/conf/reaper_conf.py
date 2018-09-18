@@ -50,6 +50,13 @@ The number of alternative slots that the the reaper will try to free up for
 each requested slot.
 """
     ),
+    cfg.IntOpt('parallel_timeout',
+               default=10,
+               help="""
+The number of seconds that the reaper will allow to populate the resource
+providers.
+"""
+    ),
     cfg.IntOpt('max_attempts',
                default=5,
                help="""

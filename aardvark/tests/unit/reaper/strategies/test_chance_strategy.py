@@ -34,66 +34,26 @@ class ChanceStrategyTests(base.BaseTestCase):
         super(ChanceStrategyTests, self).setUp()
 
     @mock.patch('aardvark.reaper.strategies.chance.ChanceStrategy.'
-                'choose_host')
-    @mock.patch('aardvark.reaper.strategies.chance.ChanceStrategy.'
                 'select_servers')
     @mock.patch('aardvark.reaper.strategy.ReaperStrategy.check_spots')
-    def test_get_preemptible_servers(self, spots, select, choose):
-        selected_hosts, selected_servers = ((['host1'], ['server1']))
-        choose.return_value = selected_hosts[0]
+    def test_get_preemptible_servers(self, spots, select):
+        selected_servers = ['server1']
+        pre1 = object_fakes.make_resources(vcpu=2, memory=512, disk=10)
+        free1 = object_fakes.make_resources(vcpu=2, memory=512, disk=10)
+        selected_hosts = [
+            mock.Mock(free_resources=free1, preemptible_resources=pre1)
+        ]
         select.return_value = selected_servers
         strategy = chance.ChanceStrategy(watermark_mode=False)
         CONF.reaper.alternatives = 1
 
         requested = object_fakes.make_resources(vcpu=2, memory=512, disk=10)
 
+        projects = [mock.Mock()]
         self.assertEqual((selected_hosts, selected_servers),
-                         strategy.get_preemptible_servers(requested, None, 1))
+            strategy.get_preemptible_servers(requested, selected_hosts, 1,
+                                             projects))
         spots.assert_called_once_with(selected_hosts, requested, 1)
-
-    def test_choose_host(self):
-        strategy = chance.ChanceStrategy(watermark_mode=False)
-
-        pre1 = object_fakes.make_resources(vcpu=2, memory=512, disk=10)
-        free1 = object_fakes.make_resources(vcpu=2, memory=512, disk=10)
-
-        pre2 = object_fakes.make_resources(vcpu=4, memory=1024, disk=20)
-        free2 = object_fakes.make_resources()
-
-        hosts = [
-            mock.Mock(free_resources=free1, preemptible_resources=pre1),
-            mock.Mock(free_resources=free2, preemptible_resources=pre2)
-        ]
-
-        request = object_fakes.make_resources(vcpu=4, memory=1024, disk=20)
-
-        with mock.patch('random.choice') as mocked:
-            mocked.side_effect = mocked_random
-            self.assertEqual(hosts, strategy.choose_host(hosts, request))
-            strategy.watermark_mode = True
-            self.assertEqual([hosts[1]], strategy.choose_host(hosts, request))
-
-    def test_choose_host_not_equal_resources(self):
-        strategy = chance.ChanceStrategy(watermark_mode=False)
-
-        pre1 = object_fakes.make_resources(vcpu=3, disk=10)
-        free1 = object_fakes.make_resources(vcpu=1, memory=512, disk=10)
-
-        pre2 = object_fakes.make_resources(vcpu=4, memory=1024, disk=20)
-        free2 = object_fakes.make_resources()
-
-        hosts = [
-            mock.Mock(free_resources=free1, preemptible_resources=pre1),
-            mock.Mock(free_resources=free2, preemptible_resources=pre2)
-        ]
-
-        request = object_fakes.make_resources(vcpu=4)
-
-        with mock.patch('random.choice') as mocked:
-            mocked.side_effect = mocked_random
-            self.assertEqual(hosts, strategy.choose_host(hosts, request))
-            strategy.watermark_mode = True
-            self.assertEqual([hosts[1]], strategy.choose_host(hosts, request))
 
     def test_select_servers(self):
         strategy = chance.ChanceStrategy(watermark_mode=True)

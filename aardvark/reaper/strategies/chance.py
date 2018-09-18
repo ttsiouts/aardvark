@@ -16,6 +16,7 @@
 import aardvark.conf
 from aardvark.objects import resources as resources_obj
 from aardvark.reaper import strategy
+from aardvark import utils
 
 from oslo_log import log as logging
 
@@ -31,24 +32,43 @@ class ChanceStrategy(strategy.ReaperStrategy):
     def __init__(self, watermark_mode=False):
         super(ChanceStrategy, self).__init__(watermark_mode=watermark_mode)
 
-    def get_preemptible_servers(self, requested, hosts, num_instances):
+    def get_preemptible_servers(self, requested, hosts, num_instances,
+                                projects):
         """Implements the strategy of freeing up the requested resources.
 
         :param req_spec: an instance of the RequestSpec class representing the
                          requested resources
         :param resources: (Why is this here?)
         """
-        selected_servers = list()
-        selected_hosts = list()
 
         # This is the maximum number of spots that we'll try to free up
         max_allocs = num_instances * CONF.reaper.alternatives
+        timeout = CONF.reaper.parallel_timeout
+
+        @utils.timeit
+        @utils.parallelize(max_results=max_allocs, timeout=timeout)
+        def get_valid_hosts(hosts, requested):
+            valid_hosts = list()
+            for host in hosts:
+                host.populate(projects)
+                resources = strategy.host_potential(
+                    host, host.preemptible_resources, not self.watermark_mode)
+                if requested <= resources:
+                    # Create a list with the hosts that can potentially provide
+                    # the requested resources.
+                    valid_hosts.append(host)
+            return valid_hosts
+
+        selected_servers = list()
+        selected_hosts = list()
 
         for i in range(0, max_allocs):
-            host = self.choose_host(hosts, requested)
-            if not host:
-                break
 
+            valid = get_valid_hosts(hosts, requested)
+            try:
+                host = random.choice(valid)
+            except IndexError:
+                break
             servers = self.select_servers(host, requested)
 
             # If the host is not added and it has given servers for culling,
@@ -69,31 +89,6 @@ class ChanceStrategy(strategy.ReaperStrategy):
             self.check_spots(selected_hosts, requested, num_instances)
 
         return selected_hosts, selected_servers
-
-    def choose_host(self, hosts, requested):
-        """Random selection of the host.
-
-        Finds the hosts that can provide the requested resources and randomly
-        selects one of them.
-
-        :param hosts: a dictionary containing the instances and flavors per
-                      host mapping
-        :param requested: an instance of the utils.miscellaneous.Resources
-                          class representing the requested resources
-        """
-        valid_hosts = list()
-        for host in hosts:
-            resources = strategy.host_potential(
-                host, host.preemptible_resources, not self.watermark_mode)
-            if requested <= resources:
-                # Create a list with the hosts that can potentially provide
-                # the requested resources.
-                valid_hosts.append(host)
-
-        if not valid_hosts:
-            return None
-
-        return random.choice(valid_hosts)
 
     def select_servers(self, host, requested):
         """Selects the server(s) to cull from the provided host.

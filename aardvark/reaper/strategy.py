@@ -42,7 +42,8 @@ class ReaperStrategy(object):
         self.watermark_mode = watermark_mode
 
     @abc.abstractmethod
-    def get_preemptible_servers(self, requested, hosts, num_instances):
+    def get_preemptible_servers(self, requested, hosts, num_instances,
+                                projects):
         # NOTE(ttsiouts): Every driver should override this method and
         # implement the strategy of the freeing
         pass

@@ -128,13 +128,15 @@ class Reaper(object):
     @utils.retries(exception.RetriesExceeded)
     def free_resources(self, request, system, slots=1, watermark_mode=False):
 
-        system.populate_system_rps()
         reaper_strategy = self._load_configured_strategy(
             watermark_mode=watermark_mode)
 
+        hosts = system.resource_providers
+        projects = [p.id_ for p in system.preemptible_projects]
+
         selected_hosts, selected_servers = \
-            reaper_strategy.get_preemptible_servers(
-                request, system.resource_providers, slots)
+            reaper_strategy.get_preemptible_servers(request, hosts,
+                                                    slots, projects)
 
         for server in selected_servers:
             try:
@@ -238,6 +240,7 @@ class Reaper(object):
             if aggregate not in self.aggregates:
                 raise exception.UnwatchedAggregate()
 
+    @utils.timeit
     def wait_until_allocations_are_deleted(self, uuids, timeout=20):
         """Wait until the allocation is deleted
 

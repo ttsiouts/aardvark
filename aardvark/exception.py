@@ -45,6 +45,10 @@ class BadConfigException(AardvarkException):
     message = "Unknown error occurred because of bad configuration"
 
 
+class ParallelTimeout(AardvarkException):
+    message = "The timeout for a parallel task exceeded"
+
+
 class ReaperException(AardvarkException):
     """Base Reaper Exception"""
     message = "Unknown error occurred during Reaper's execution"

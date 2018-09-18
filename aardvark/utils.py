@@ -13,9 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from collections import Iterable
+import eventlet.queue
+import eventlet.timeout
 from functools import wraps
 from oslo_concurrency import lockutils
 from oslo_log import log
+import time
 
 from aardvark.api.rest import nova
 import aardvark.conf
@@ -71,6 +75,19 @@ def retries(side_effect=None):
     return decorator
 
 
+def timeit(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if CONF.aardvark.benchmarking_mode:
+            now = time.time()
+        result = fn(*args, **kwargs)
+        if CONF.aardvark.benchmarking_mode:
+            LOG.info("Took %s secs to execute %s",
+                     time.time() - now, fn.__name__)
+        return result
+    return wrapper
+
+
 class SafeDict(dict):
     """Provides a threadsafe dictionary by locking the methods needed"""
 
@@ -102,3 +119,75 @@ def map_aggregate_names():
             message = "One of the configured aggregates was not found"
             raise exception.BadConfigException(message)
     return uuids
+
+
+def parallelize(max_results=-1, num_workers=10, timeout=10):
+    """Helper function to parallelize a workload
+
+    This decorator can be used to parallelize a method.
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            greenthreads = []
+            responded = []
+            results = []
+            queue = eventlet.queue.LightQueue()
+
+            @wraps(func)
+            def parallel_task(i, *ars, **kwars):
+                try:
+                    result = func(*ars, **kwars)
+                    if not isinstance(result, Iterable):
+                        result = [result]
+                    queue.put((i, result))
+                except Exception:
+                    pass
+
+            workload = args[0]
+            for i, load in enumerate(split_workload(num_workers, workload)):
+                ar = [load]
+                ar += args[1:]
+                greenthreads.append(
+                    (i, eventlet.spawn(parallel_task, i, *ar, **kwargs))
+                )
+
+            with eventlet.timeout.Timeout(timeout, exception.ParallelTimeout):
+                try:
+                    while len(responded) < len(greenthreads):
+                        if max_results != -1 and max_results <= len(results):
+                            LOG.info("Max results %s, gathered for %s",
+                                     max_results, func.__name__)
+                            break
+                        i, result = queue.get()
+                        responded.append(i)
+                        results += result
+                except exception.ParallelTimeout:
+                    LOG.error("Timeout for parallel task exceeded")
+                    pass
+
+            for id_, greenthread in greenthreads:
+                if id_ not in responded:
+                    greenthread.kill()
+                else:
+                    greenthread.wait()
+            return results
+        return wrapper
+    return decorator
+
+
+def split_workload(num_workers, workload):
+    jobs = []
+
+    length = len(workload)
+    ratio = length / float(num_workers)
+    ratio = int(ratio) + 1 if ratio > int(ratio) else int(ratio)
+
+    for i in range(0, num_workers):
+        if i == num_workers - 1:
+            jobs.append(l for l in workload[i * ratio:])
+        else:
+            jobs.append(l for l in workload[i * ratio: (i + 1) * ratio])
+        if (i + 1) * ratio >= length:
+            break
+    return jobs

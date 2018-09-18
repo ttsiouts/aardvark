@@ -14,7 +14,13 @@
 #    under the License.
 
 from aardvark.objects import base
+from aardvark.objects import instance
 from aardvark.objects import resources
+
+from oslo_log import log
+
+
+LOG = log.getLogger(__name__)
 
 
 class ResourceProvider(base.PlacementObjectWrapper):
@@ -70,6 +76,18 @@ class ResourceProvider(base.PlacementObjectWrapper):
 
     def __hash__(self):
         return hash(self.uuid)
+
+    def populate(self, preemptible_projects):
+        instance_list = instance.InstanceList()
+        servers = list()
+        for pr_project in preemptible_projects:
+            filters = {
+                'host': self.name,
+                'project_id': pr_project,
+                'vm_state': 'ACTIVE'
+            }
+            servers += instance_list.instances(**filters)
+        self.preemptible_servers = servers
 
 
 class ResourceProviderList(base.PlacementObjectWrapper):
