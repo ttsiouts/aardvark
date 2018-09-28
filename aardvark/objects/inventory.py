@@ -32,7 +32,7 @@ class Inventory(object):
         for attr in self._attrs:
             try:
                 if attr == 'total':
-                    total = float(kwargs[attr]) * allocation_ratio - reserved
+                    total = float(kwargs[attr] - reserved) * allocation_ratio
                     setattr(self, attr, total)
                     continue
                 setattr(self, attr, float(kwargs[attr]))
