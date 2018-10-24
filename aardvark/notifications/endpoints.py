@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
 from aardvark.api.rest import nova
 from aardvark import exception
 from aardvark.notifications import base
@@ -23,15 +22,11 @@ from aardvark.reaper import job_manager
 from aardvark.reaper import reaper_request as rr_obj
 from aardvark import utils
 
-import collections
 from novaclient import exceptions as n_exc
 from oslo_log import log as logging
 
 
 LOG = logging.getLogger(__name__)
-
-
-instance_map = utils.SafeDict()
 
 
 class SchedulingEndpoint(base.NotificationEndpoint):
@@ -42,10 +37,15 @@ class SchedulingEndpoint(base.NotificationEndpoint):
         super(SchedulingEndpoint, self).__init__()
 
     def error(self, ctxt, publisher_id, event_type, payload, metadata):
-        # Add the info in a dict with the uuid as a key
-        event = events.SchedulingEvent(payload)
-        for uuid in event.instance_uuids:
-            instance_map[uuid] = event
+        # Store the info in the database
+        LOG.info("Received new scheduling info")
+        event = events.SchedulingEvent.from_payload(payload)
+        try:
+            event.create()
+        except exception.DBException:
+            LOG.error("An exception occured while storing scheduling info "
+                      "for request_id: %s", event.request_id)
+            pass
         return self._default_action()
 
 
@@ -57,57 +57,54 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
         super(StateUpdateEndpoint, self).__init__()
         self.novaclient = nova.novaclient()
         self.job_manager = job_manager.JobManager()
-        # Use this dict to bundle up the scheduling events
-        self.bundled_reqs = collections.defaultdict(list)
 
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
-        event = events.InstanceUpdateEvent(payload)
+        event = events.StateUpdateEvent.from_payload(payload)
         if event.is_failed_build() or event.is_failed_rebuild():
             event_type = "build" if event.is_failed_build() else "rebuild"
+            # Persist the event here, since it's of interest.
+            event.create()
+            event.set_handled()
             try:
                 self.trigger_reaper(
                     event.instance_uuid, event.flavor, event.image, event_type)
             except exception.RetriesExceeded:
-                LOG.debug("Requeue the notification. Another instance of the "
-                          "reaper has the required scheduling information")
+                LOG.debug("Couldn't find the scheduling info for instance"
+                          "%s. Returning.")
                 return self.requeue()
-        else:
-            # Pop instance info from the instance_map in case this is about
-            # another state transition.
-            uuid = instance_map.pop(event.instance_uuid, None)
-            if uuid:
-                LOG.debug("Removed instance %s from instance map", uuid)
         return self._default_action()
 
     @utils.retries(exception.RetriesExceeded)
     def trigger_reaper(self, uuid, flavor, image, event_type):
         try:
             # No default value in order to retry
-            info = instance_map.pop(uuid)
-        except KeyError:
+            info = events.SchedulingEvent.get_by_instance_uuid(uuid)
+            info.set_handled(instance_uuid=uuid, handled=True)
+        except exception.DBException:
             # Maybe there is a race. Raising RetryException to rerty
             LOG.debug('Retrying to retrieve info for uuid <%s>', uuid)
             raise exception.RetryException()
 
+        if info.retries >= 5:
+            LOG.info("Retries for instance %s exceeded. Setting event to "
+                     "handled and returning", uuid)
+            return
+
         LOG.info("Notification received for uuid: %s event type: %s",
                  uuid, event_type)
-        # Enrich the request with info from the instance_map
+        # Enrich the request with info from the scheduling_info
         request = resources_obj.Resources.obj_from_payload(flavor)
 
         uuids = info.instance_uuids
-        request_id = info.request_id
 
-        if info.multiple_instances:
-            self.bundled_reqs[info.request_id] += [uuid]
-            if len(info.instance_uuids) != len(self.bundled_reqs[request_id]):
+        if info.multiple_instances and event_type != "rebuild":
+            unhandled_events = info.count_scheduling_instances(handled=False)
+            if unhandled_events != 0:
                 # Wait until the last instance for this request is set to the
                 # Pending state, bundle the requests and trigger the reaper
                 # once for all of them.
                 LOG.info('Bundling up requests for multiple instances.')
                 return
-            # Remove the bundled requests after all instance update
-            # notifications are received
-            del self.bundled_reqs[request_id]
 
         reaper_request = rr_obj.ReaperRequest(
                 uuids, info.project_id, request, image, info.aggregates)
