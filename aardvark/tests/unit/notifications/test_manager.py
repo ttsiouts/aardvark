@@ -15,12 +15,12 @@
 
 import mock
 
-from oslotest import base
+from aardvark.tests import base
 
 from aardvark.notifications import manager
 
 
-class ManagerTests(base.BaseTestCase):
+class ManagerTests(base.TestCase):
 
     def setUp(self):
         super(ManagerTests, self).setUp()

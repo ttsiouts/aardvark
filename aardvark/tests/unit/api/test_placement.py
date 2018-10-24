@@ -14,10 +14,10 @@
 #    under the License.
 
 from aardvark.api.rest import placement
-from oslotest import base
+from aardvark.tests import base
 
 
-class PlacementTests(base.BaseTestCase):
+class PlacementTests(base.TestCase):
 
     def setUp(self):
         super(PlacementTests, self).setUp()

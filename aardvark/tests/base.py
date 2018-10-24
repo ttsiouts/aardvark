@@ -13,18 +13,33 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
+from oslo_log import log
+from oslotest import base
+import testscenarios
 
-import aardvark.conf
-from aardvark.tests import base
+from aardvark.tests import conf_fixture
 
 
-CONF = aardvark.conf.CONF
+CONF = cfg.CONF
+try:
+    log.register_options(CONF)
+except cfg.ArgsAlreadyParsedError:
+    pass
+CONF.set_override('use_stderr', False)
 
 
-class StrictStrategyTests(base.TestCase):
+class BaseTestCase(testscenarios.WithScenarios, base.BaseTestCase):
+    """Test base class."""
 
     def setUp(self):
-        super(StrictStrategyTests, self).setUp()
+        super(BaseTestCase, self).setUp()
+        self.addCleanup(cfg.CONF.reset)
 
-    def test_choose_host(self):
-        pass
+
+class TestCase(base.BaseTestCase):
+    """Test case base class for all unit tests."""
+
+    def setUp(self):
+        super(TestCase, self).setUp()
+        self.useFixture(conf_fixture.ConfFixture())

@@ -13,18 +13,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslotest import base
 
 import aardvark.conf
 from aardvark import exception
 from aardvark.reaper.strategies import chance
+from aardvark.tests import base
 from aardvark.tests.unit.objects import fakes as object_fakes
 
 
 CONF = aardvark.conf.CONF
 
 
-class ReaperStrategyTests(base.BaseTestCase):
+class ReaperStrategyTests(base.TestCase):
 
     def setUp(self):
         super(ReaperStrategyTests, self).setUp()

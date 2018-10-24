@@ -15,18 +15,18 @@
 
 import mock
 from novaclient import exceptions as n_exc
-from oslotest import base
 
 import aardvark.conf
 from aardvark import exception
 from aardvark.reaper import reaper
+from aardvark.tests import base
 from aardvark.tests.unit.reaper import fakes
 
 
 CONF = aardvark.conf.CONF
 
 
-class ReaperTests(base.BaseTestCase):
+class ReaperTests(base.TestCase):
 
     def setUp(self):
         super(ReaperTests, self).setUp()

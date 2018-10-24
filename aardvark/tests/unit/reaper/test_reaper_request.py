@@ -13,13 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslotest import base
-
 from aardvark.reaper import reaper_request
+from aardvark.tests import base
 from aardvark.tests.unit.reaper import fakes
 
 
-class ReaperRequestTests(base.BaseTestCase):
+class ReaperRequestTests(base.TestCase):
 
     def setUp(self):
         super(ReaperRequestTests, self).setUp()
