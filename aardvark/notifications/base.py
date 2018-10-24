@@ -14,6 +14,7 @@
 #    under the License.
 
 import aardvark.conf
+from aardvark.objects import base
 import oslo_messaging
 
 
@@ -54,12 +55,12 @@ class NotificationEndpoint(object):
     warn = _default_action
 
 
-class NotificationEvent(object):
+class NotificationEvent(base.PersistentObject):
     """Base Notification event
 
     The notification payload is cast into this event as soon as the
     notification is received
     """
 
-    def __init__(self, payload):
-        self.payload = payload
+    def __init__(self):
+        super(NotificationEvent, self).__init__()

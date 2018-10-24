@@ -15,7 +15,6 @@
 
 from oslo_db import exception as db_exc
 from oslo_db.sqlalchemy import session as db_session
-from oslo_log import log
 from oslo_utils import uuidutils
 from sqlalchemy import orm
 from sqlalchemy.orm.exc import NoResultFound
@@ -27,7 +26,6 @@ from aardvark import exception
 
 
 CONF = aardvark.conf.CONF
-LOG = log.getLogger(__name__)
 _FACADE = None
 
 
@@ -92,7 +90,6 @@ class Connection(api.Connection):
             query = model_query(models.SchedulingEvent, session=session)
             query = query.filter_by(uuid=event_uuid)
             try:
-                LOG.info("UPDATING at %s: vals: %s", event_uuid, values)
                 ref = query.with_lockmode('update').one()
             except NoResultFound:
                 raise exception.SchedulingEventNotFound(uuid=event_uuid)

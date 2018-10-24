@@ -37,7 +37,7 @@ class SchedulingEventTests(EventTests):
         project = "project"
         payload = fakes.make_scheduling_payload(
             instances, aggregates=aggs, req_id=request_id, project=project)
-        event = events.SchedulingEvent(payload)
+        event = events.SchedulingEvent.from_payload(payload)
         self.assertEqual(instances, event.instance_uuids)
         self.assertEqual(aggs, event.aggregates)
         self.assertEqual(request_id, event.request_id)
@@ -47,7 +47,7 @@ class SchedulingEventTests(EventTests):
     def test_scheduling_event_no_aggregates(self):
         instances = ["instance_uuid1"]
         payload = fakes.make_scheduling_payload(instances)
-        event = events.SchedulingEvent(payload)
+        event = events.SchedulingEvent.from_payload(payload)
         self.assertEqual(instances, event.instance_uuids)
         self.assertIsNone(event.aggregates)
         self.assertTrue(not event.multiple_instances)
@@ -67,7 +67,7 @@ class InstanceUpdateEventTests(EventTests):
 
         payload = fakes.make_state_update_payload(
             instance, new_state, old_state, image_uuid, flavor_uuid)
-        event = events.InstanceUpdateEvent(payload)
+        event = events.StateUpdateEvent.from_payload(payload)
         self.assertEqual(instance, event.instance_uuid)
         self.assertEqual(new_state, event.new_state)
         self.assertEqual(old_state, event.old_state)

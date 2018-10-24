@@ -81,3 +81,8 @@ class PlacementObjectWrapper(BaseObjectWrapper):
         # NOTE(ttsiouts): this is the backend resource where the object's info
         # are loaded from.
         self._resource = class_(**kwargs)
+
+
+class PersistentObject(object):
+    """Base class for all objects stored in aardvark DB"""
+    pass

@@ -21,15 +21,14 @@ from aardvark import exception
 from aardvark.notifications import base as base_obj
 from aardvark.notifications import endpoints
 from aardvark.notifications import events
-from aardvark.tests import base
+from aardvark.tests.unit.db import base
 from aardvark.tests.unit.notifications import fakes
 
 
-class EndpointsTests(base.TestCase):
+class EndpointsTests(base.DbTestCase):
 
     def setUp(self):
         super(EndpointsTests, self).setUp()
-        endpoints.instance_map = {}
         self.endpoint = base_obj.NotificationEndpoint()
 
     def _assert_default_action(self, noop_args, result):
@@ -65,26 +64,21 @@ class SchedulingEndpointTests(EndpointsTests):
         aggregates = ['aggregate']
         sched_payload = fakes.make_scheduling_payload(instances, aggregates)
         self.endpoint.error(None, None, None, sched_payload, None)
-        self.assertTrue(instances[0] in endpoints.instance_map)
 
     def test_error_payload_multiple_instances(self):
         instances = ['instance_uuid1', 'instance_uuid2']
         aggregates = ['aggregate']
         sched_payload = fakes.make_scheduling_payload(instances, aggregates)
         self.endpoint.error(None, None, None, sched_payload, None)
-        self.assertTrue(instances[0] in endpoints.instance_map)
-        self.assertTrue(instances[1] in endpoints.instance_map)
-        self.assertEqual(endpoints.instance_map[instances[0]],
-                         endpoints.instance_map[instances[1]])
+        event = events.SchedulingEvent.get_by_instance_uuid('instance_uuid1')
+        self.assertEqual(2, event.count_scheduling_instances(handled=False))
 
     def test_error_payload_no_aggregates(self):
         instances = ['instance_uuid1', 'instance_uuid2']
         sched_payload = fakes.make_scheduling_payload(instances)
         self.endpoint.error(None, None, None, sched_payload, None)
-        self.assertTrue(instances[0] in endpoints.instance_map)
-        self.assertTrue(instances[1] in endpoints.instance_map)
-        self.assertEqual(endpoints.instance_map[instances[0]],
-                         endpoints.instance_map[instances[1]])
+        event = events.SchedulingEvent.get_by_instance_uuid('instance_uuid1')
+        self.assertEqual(2, event.count_scheduling_instances(handled=False))
 
 
 class StateUpdateEndpointTests(EndpointsTests):
@@ -109,10 +103,8 @@ class StateUpdateEndpointTests(EndpointsTests):
         image_uuid = "image_uuid"
         flavor_uuid = "flavor_uuid"
 
-        scheduling_payload = fakes.make_scheduling_payload([instance])
         payload = fakes.make_state_update_payload(
             instance, new_state, old_state, image_uuid, flavor_uuid)
-        endpoints.instance_map[instance] = scheduling_payload
 
         with mock.patch.object(self.endpoint, 'trigger_reaper') as trigger:
             trigger.side_effect = exception.RetriesExceeded
@@ -126,14 +118,11 @@ class StateUpdateEndpointTests(EndpointsTests):
         image_uuid = "image_uuid"
         flavor_uuid = "flavor_uuid"
 
-        scheduling_payload = fakes.make_scheduling_payload([instance])
         update_payload = fakes.make_state_update_payload(
             instance, new_state, old_state, image_uuid, flavor_uuid)
-        endpoints.instance_map[instance] = scheduling_payload
 
         with mock.patch.object(self.endpoint, 'trigger_reaper') as trigger:
             self.endpoint.info(None, None, None, update_payload, None)
-            self.assertTrue(instance not in endpoints.instance_map)
             self.assertTrue(not trigger.called)
 
     def test_payload_build_to_pending(self):
@@ -144,10 +133,8 @@ class StateUpdateEndpointTests(EndpointsTests):
         flavor_uuid = "flavor_uuid"
         e_type = "build"
 
-        scheduling_payload = fakes.make_scheduling_payload([instance])
         payload = fakes.make_state_update_payload(
             instance, new_state, old_state, image_uuid, flavor_uuid)
-        endpoints.instance_map[instance] = scheduling_payload
 
         flavor = payload['nova_object.data']['flavor']['nova_object.data']
 
@@ -166,11 +153,9 @@ class StateUpdateEndpointTests(EndpointsTests):
         flavor_uuid = "flavor_uuid"
         e_type = "rebuild"
 
-        scheduling_payload = fakes.make_scheduling_payload([instance])
         payload = fakes.make_state_update_payload(
             instance, new_state, old_state, image_uuid, flavor_uuid,
             old_task=old_task, new_task=new_task)
-        endpoints.instance_map[instance] = scheduling_payload
 
         flavor = payload['nova_object.data']['flavor']['nova_object.data']
 
@@ -188,16 +173,16 @@ class StateUpdateEndpointTests(EndpointsTests):
         e_type = "build"
 
         scheduling_payload = fakes.make_scheduling_payload([instance])
-        scheduling_event = events.SchedulingEvent(scheduling_payload)
+        scheduling_event = events.SchedulingEvent.from_payload(
+            scheduling_payload)
+        scheduling_event.create()
         payload = fakes.make_state_update_payload(
             instance, new_state, old_state, image_uuid, flavor_uuid)
-        endpoints.instance_map[instance] = scheduling_event
         flavor = payload['nova_object.data']['flavor']['nova_object.data']
 
         self.endpoint.trigger_reaper(instance, flavor, image_uuid, e_type)
-        self.assertEqual(len(self.endpoint.bundled_reqs.keys()), 0)
-        self.assertTrue(instance not in endpoints.instance_map)
         self.assertTrue(self.endpoint.job_manager.post_job.called)
+        self.assertEqual(0, scheduling_event.count_scheduling_instances())
 
     def test_trigger_reaper_multiple_instances(self):
         instances = ["instance_uuid1", "instance_uuid2"]
@@ -210,23 +195,19 @@ class StateUpdateEndpointTests(EndpointsTests):
 
         scheduling_payload = fakes.make_scheduling_payload(instances,
                                                            req_id=request_id)
-        scheduling_event = events.SchedulingEvent(scheduling_payload)
+        scheduling_event = events.SchedulingEvent.from_payload(
+            scheduling_payload)
         payload = fakes.make_state_update_payload(
             instances, new_state, old_state, image_uuid, flavor_uuid)
-        endpoints.instance_map[instances[0]] = scheduling_event
-        endpoints.instance_map[instances[1]] = scheduling_event
+        scheduling_event.create()
         flavor = payload['nova_object.data']['flavor']['nova_object.data']
 
         self.endpoint.trigger_reaper(instances[0], flavor, image_uuid, e_type)
-        self.assertTrue(request_id in self.endpoint.bundled_reqs)
-        self.assertTrue(instances[0] not in endpoints.instance_map)
-        self.assertEqual(
-            [instances[0]], self.endpoint.bundled_reqs[request_id])
         self.assertTrue(not self.endpoint.job_manager.post_job.called)
 
         self.endpoint.trigger_reaper(instances[1], flavor, image_uuid, e_type)
-        self.assertTrue(request_id not in self.endpoint.bundled_reqs)
         self.endpoint.job_manager.post_job.assert_called_once()
+        self.assertEqual(0, scheduling_event.count_scheduling_instances())
 
     def test_trigger_reaper_failure(self):
         instance = "instance_uuid"
@@ -237,20 +218,20 @@ class StateUpdateEndpointTests(EndpointsTests):
         event_type = "build"
 
         scheduling_payload = fakes.make_scheduling_payload([instance])
-        scheduling_event = events.SchedulingEvent(scheduling_payload)
+        scheduling_event = events.SchedulingEvent.from_payload(
+            scheduling_payload)
+        scheduling_event.create()
         payload = fakes.make_state_update_payload(
             instance, new_state, old_state, image_uuid, flavor_uuid)
-        endpoints.instance_map[instance] = scheduling_event
         flavor = payload['nova_object.data']['flavor']['nova_object.data']
 
         self.endpoint.job_manager.post_job.side_effect = \
             exception.ReaperException()
         self.endpoint.trigger_reaper(instance, flavor, image_uuid, event_type)
-        self.assertEqual(len(self.endpoint.bundled_reqs.keys()), 0)
-        self.assertTrue(instance not in endpoints.instance_map)
         self.endpoint.novaclient.servers.reset_state.assert_called_once()
         self.endpoint.novaclient.servers.reset_state.assert_called_with(
             instance)
+        self.assertEqual(0, scheduling_event.count_scheduling_instances())
 
     def test_reset_instances(self):
         self.endpoint.novaclient.servers.reset_state.side_effect = \
