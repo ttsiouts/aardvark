@@ -16,16 +16,16 @@
 import mock
 
 from novaclient import exceptions as n_exc
-from oslotest import base
 
 from aardvark import exception
 from aardvark.notifications import base as base_obj
 from aardvark.notifications import endpoints
 from aardvark.notifications import events
+from aardvark.tests import base
 from aardvark.tests.unit.notifications import fakes
 
 
-class EndpointsTests(base.BaseTestCase):
+class EndpointsTests(base.TestCase):
 
     def setUp(self):
         super(EndpointsTests, self).setUp()

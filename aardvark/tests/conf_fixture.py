@@ -13,18 +13,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import fixtures
 
 import aardvark.conf
-from aardvark.tests import base
-
+from aardvark import config
 
 CONF = aardvark.conf.CONF
 
 
-class StrictStrategyTests(base.TestCase):
+class ConfFixture(fixtures.Fixture):
+    """Fixture to manage global conf settings."""
 
-    def setUp(self):
-        super(StrictStrategyTests, self).setUp()
-
-    def test_choose_host(self):
-        pass
+    def _setUp(self):
+        # CONF.set_default('connection', "sqlite://", group='database')
+        # CONF.set_default('sqlite_synchronous', False, group='database')
+        config.parse_args([], default_config_files=[])
+        self.addCleanup(CONF.reset)

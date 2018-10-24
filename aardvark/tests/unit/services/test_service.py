@@ -14,17 +14,17 @@
 #    under the License.
 
 import mock
-from oslotest import base
 
 import aardvark.conf
 from aardvark.services import reaper_service
+from aardvark.tests import base
 from aardvark.tests.unit.reaper import fakes as reaper_fakes
 
 
 CONF = aardvark.conf.CONF
 
 
-class ReaperServiceTests(base.BaseTestCase):
+class ReaperServiceTests(base.TestCase):
 
     def setUp(self):
         super(ReaperServiceTests, self).setUp()

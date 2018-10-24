@@ -13,13 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslotest import base
 
 from aardvark.objects import capabilities
+from aardvark.tests import base
 from aardvark.tests.unit.objects import fakes
 
 
-class CapabilitiesTests(base.BaseTestCase):
+class CapabilitiesTests(base.TestCase):
 
     def setUp(self):
         super(CapabilitiesTests, self).setUp()

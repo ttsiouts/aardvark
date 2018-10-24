@@ -17,15 +17,14 @@ import mock
 
 import aardvark.conf
 from aardvark import exception
+from aardvark.tests import base
 from aardvark import utils
-
-from oslotest import base
 
 
 CONF = aardvark.conf.CONF
 
 
-class UtilsTests(base.BaseTestCase):
+class UtilsTests(base.TestCase):
 
     def setUp(self):
         super(UtilsTests, self).setUp()

@@ -14,10 +14,10 @@
 #    under the License.
 
 import mock
-from oslotest import base
 
 import aardvark.conf
 from aardvark.reaper.strategies import chance
+from aardvark.tests import base
 from aardvark.tests.unit.objects import fakes as object_fakes
 
 
@@ -28,7 +28,7 @@ def mocked_random(arg):
     return arg
 
 
-class ChanceStrategyTests(base.BaseTestCase):
+class ChanceStrategyTests(base.TestCase):
 
     def setUp(self):
         super(ChanceStrategyTests, self).setUp()
