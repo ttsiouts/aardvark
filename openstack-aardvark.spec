@@ -42,16 +42,19 @@ Requires:       python-aardvark = %{epoch}:%{version}-%{release}
 %package -n     python-%{service}
 Summary:        Aardvark Python libraries
 Provides:       python-%{name} = %{version}-%{release}
+Requires:       python2-alembic >= 0.8.10
 Requires:       python2-keystoneclient >= 3.15.0
 Requires:       python2-keystoneauth1 >= 3.4.0
 Requires:       python2-novaclient >= 1:9.1.0
 Requires:       python2-oslo-concurrency >= 3.26.0
 Requires:       python2-oslo-config >= 2:5.2.0
+Requires:       python2-oslo-db >= 4.27.0
 Requires:       python2-oslo-log >= 3.36.0
 Requires:       python2-oslo-messaging >= 5.29.0
 Requires:       python2-oslo-context >= 2.19.2
 Requires:       python2-taskflow >= 2.16.0
 Requires:       python2-stevedore >= 1.20.0
+Requires:       python2-sqlalchemy >= 1.0.10
 
 %description -n python-%{service}
 %{common_desc}

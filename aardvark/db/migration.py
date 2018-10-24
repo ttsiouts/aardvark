@@ -13,19 +13,34 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import fixtures
+from stevedore import driver
 
 import aardvark.conf
-from aardvark import config
 
 CONF = aardvark.conf.CONF
+_IMPL = None
 
 
-class ConfFixture(fixtures.Fixture):
-    """Fixture to manage global conf settings."""
+def get_backend():
+    global _IMPL
+    if not _IMPL:
+        _IMPL = driver.DriverManager("aardvark.database.migration_backend",
+                                     CONF.database.backend).driver
+    return _IMPL
 
-    def _setUp(self):
-        CONF.set_default('connection', "sqlite://", group='database')
-        CONF.set_default('sqlite_synchronous', False, group='database')
-        config.parse_args([], default_config_files=[])
-        self.addCleanup(CONF.reset)
+
+def upgrade(version=None):
+    """Migrate the database to `version` or the most recent version."""
+    return get_backend().upgrade(version)
+
+
+def version():
+    return get_backend().version()
+
+
+def stamp(version):
+    return get_backend().stamp(version)
+
+
+def revision(message, autogenerate):
+    return get_backend().revision(message, autogenerate)

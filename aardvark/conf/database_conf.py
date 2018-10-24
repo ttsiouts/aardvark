@@ -13,19 +13,29 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import fixtures
-
-import aardvark.conf
-from aardvark import config
-
-CONF = aardvark.conf.CONF
+from oslo_config import cfg
+from oslo_db import options
 
 
-class ConfFixture(fixtures.Fixture):
-    """Fixture to manage global conf settings."""
+_DEFAULT_SQL_CONNECTION = 'sqlite:///' + 'aardvark.sqlite'
 
-    def _setUp(self):
-        CONF.set_default('connection', "sqlite://", group='database')
-        CONF.set_default('sqlite_synchronous', False, group='database')
-        config.parse_args([], default_config_files=[])
-        self.addCleanup(CONF.reset)
+database_group = cfg.OptGroup(name='database',
+                              title='Options for Aardvark Database')
+
+sql_opts = [
+    cfg.StrOpt('mysql_engine',
+               default='InnoDB',
+               help='MySQL engine to use.')
+]
+
+
+def register_opts(conf):
+    conf.register_group(database_group)
+    conf.register_opts(sql_opts, group=database_group)
+    options.set_defaults(conf, connection=_DEFAULT_SQL_CONNECTION)
+
+
+def list_opts():
+    return {
+        database_group: sql_opts
+    }

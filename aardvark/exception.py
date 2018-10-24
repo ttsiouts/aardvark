@@ -24,9 +24,15 @@ class AardvarkException(Exception):
 
     message = "Unknown error occurred during Reaper's execution"
 
-    def __init__(self, message=None):
+    def __init__(self, message=None, **kwargs):
         if message:
             self.message = message
+        try:
+            self.message = self.message % kwargs
+        except Exception:
+            ex_name = self.__class__.__name__
+            LOG.exception("Exception in string format operation, "
+                          "exception type: %s, kwargs: %s", ex_name, kwargs)
         super(AardvarkException, self).__init__(self.message)
 
 
@@ -68,3 +74,28 @@ class UnwatchedAggregate(ReaperException):
 
 class UnknownRequestType(ReaperException):
     message = "Received request of unknown type."
+
+
+class DBException(AardvarkException):
+    """Base DB Exception"""
+    message = "An error ocurred while accessing the database."
+
+
+class SchedulingEventAlreadyExists(DBException):
+    message = "Scheduling event already exists."
+
+
+class InstanceSchedulingEventAlreadyExists(DBException):
+    message = "Found an unhandled scheduling event for instance %(uuid)s"
+
+
+class SchedulingEventNotFound(DBException):
+    message = "Scheduling event for instance %(uuid)s not found."
+
+
+class StateUpdateEventAlreadyExists(DBException):
+    message = "Found an unhandled state update event for instance %(uuid)s."
+
+
+class StateUpdateEventNotFound(DBException):
+    message = "State update event for instance %(uuid)s was not found."
