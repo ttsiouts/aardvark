@@ -19,6 +19,7 @@ from aardvark.notifications import base
 from aardvark.notifications import events
 from aardvark.objects import resources as resources_obj
 from aardvark.reaper import job_manager
+from aardvark.reaper import reaper_action as ra
 from aardvark.reaper import reaper_request as rr_obj
 from aardvark import utils
 
@@ -61,7 +62,12 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
         event = events.StateUpdateEvent.from_payload(payload)
         if event.is_failed_build() or event.is_failed_rebuild():
-            event_type = "build" if event.is_failed_build() else "rebuild"
+
+            if event.is_failed_build():
+                event_type = ra.ActionEvent.BUILD_REQUEST
+            else:
+                event_type = ra.ActionEvent.REBUILD_REQUEST
+
             # Persist the event here, since it's of interest.
             event.create()
             event.set_handled()
@@ -71,7 +77,9 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
             except exception.RetriesExceeded:
                 LOG.debug("Couldn't find the scheduling info for instance"
                           "%s. Returning.")
-                return self.requeue()
+                # The notifcation is going to be set as handled in order to
+                # avoid handling it over and over again.
+                return self.handled()
         return self._default_action()
 
     @utils.retries(exception.RetriesExceeded)
@@ -107,7 +115,8 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
                 return
 
         reaper_request = rr_obj.ReaperRequest(
-                uuids, info.project_id, request, image, info.aggregates)
+                uuids, info.project_id, request, image, event_type,
+                info.aggregates)
         try:
             self.job_manager.post_job(reaper_request)
         except exception.ReaperException as e:

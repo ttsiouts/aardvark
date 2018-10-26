@@ -27,6 +27,8 @@ class SchedulingEvent(base.NotificationEvent):
     """Scheduling Event"""
 
     dbapi = dbapi.get_instance()
+    fields = ['instance_uuids', 'request_spec', 'request_id', 'retries',
+              'uuid']
 
     def __init__(self):
         super(SchedulingEvent, self).__init__()
@@ -103,6 +105,7 @@ class SchedulingEvent(base.NotificationEvent):
             self = self.get_by_request_id(self.request_id)
             self.set_handled(handled=False)
             self.increase_retries()
+        self.refresh()
 
     def set_handled(self, instance_uuid=None, handled=True):
         values = {'handled': handled}
@@ -111,20 +114,33 @@ class SchedulingEvent(base.NotificationEvent):
                 self.uuid, values, instance_uuid=instance_uuid)
         else:
             self.dbapi.update_instance_scheduling_event(self.uuid, values)
+        self.refresh()
 
     def increase_retries(self):
         values = {'retries': self.retries + 1}
         ref = self.dbapi.update_scheduling_event(self.uuid, values)
         self = self.from_db_object(ref)
+        self.refresh()
 
     def count_scheduling_instances(self, handled=False):
         return self.dbapi.count_instance_scheduling_events(self.uuid, handled)
+
+    def refresh(self):
+        db_obj = SchedulingEvent.get_by_request_id(self.request_id)
+        new = SchedulingEvent.from_db_object(db_obj)
+        for field in self.fields:
+            if hasattr(new, field):
+                value = getattr(new, field)
+                setattr(self, field, value)
+        self.reset_changes()
 
 
 class StateUpdateEvent(base.NotificationEvent):
     """State Update Event"""
 
     dbapi = dbapi.get_instance()
+    fields = ['instance_uuid', 'state_update', 'image', 'flavor', 'handled',
+              'uuid']
 
     def __init__(self):
         super(StateUpdateEvent, self).__init__()
@@ -175,8 +191,14 @@ class StateUpdateEvent(base.NotificationEvent):
             and self.new_task_state is None)
 
     @staticmethod
-    def get_by_instance_uuid(uuid):
-        db_obj = StateUpdateEvent.dbapi.get_instance_state_update_event(uuid)
+    def get_by_uuid(uuid):
+        db_obj = StateUpdateEvent.dbapi.get_state_update_event_by_uuid(uuid)
+        return StateUpdateEvent.from_db_object(db_obj)
+
+    @staticmethod
+    def get_by_instance_uuid(instance_uuid):
+        db_obj = StateUpdateEvent.dbapi.get_state_update_event_by_instance(
+            instance_uuid)
         return StateUpdateEvent.from_db_object(db_obj)
 
     def create(self):
@@ -189,10 +211,20 @@ class StateUpdateEvent(base.NotificationEvent):
         }
         db_obj = self.dbapi.create_state_update_event(values)
         self.uuid = db_obj.uuid
+        self.refresh()
 
     def set_handled(self, handled=True):
         values = {'handled': handled}
         self.dbapi.update_instance_state_update_event(self.uuid,
                                                       self.instance_uuid,
                                                       values)
-        self.handled = handled
+        self.refresh()
+
+    def refresh(self):
+        db_obj = StateUpdateEvent.get_by_uuid(self.uuid)
+        new = StateUpdateEvent.from_db_object(db_obj)
+        for field in self.fields:
+            if hasattr(new, field):
+                value = getattr(new, field)
+                setattr(self, field, value)
+        self.reset_changes()

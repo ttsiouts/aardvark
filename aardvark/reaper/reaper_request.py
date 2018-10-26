@@ -16,6 +16,7 @@
 
 from aardvark import exception
 from aardvark.objects import resources as resources_obj
+from aardvark.reaper import reaper_action
 
 
 def request_from_job(request):
@@ -29,12 +30,14 @@ def request_from_job(request):
 
 class ReaperRequest(object):
 
-    def __init__(self, uuids, project_id, resources, image, aggregates=None):
+    def __init__(self, uuids, project_id, resources, image, event_type,
+                 aggregates=None):
         self.req_type = self.__class__.__name__
         self.uuids = uuids
         self.image = image
         self.project_id = project_id
         self.resources = resources
+        self.event_type = event_type
         self.aggregates = aggregates if aggregates else []
 
     @staticmethod
@@ -44,7 +47,9 @@ class ReaperRequest(object):
         image = primitive['image']
         resources = resources_obj.Resources(primitive['resources'])
         aggregates = primitive['aggregates']
-        return ReaperRequest(uuids, project_id, resources, image, aggregates)
+        event_type = primitive['event_type']
+        return ReaperRequest(uuids, project_id, resources, image, event_type,
+                             aggregates=aggregates)
 
     def to_dict(self):
         return {
@@ -53,6 +58,7 @@ class ReaperRequest(object):
             'project_id': self.project_id,
             'resources': self.resources.to_dict(),
             'image': self.image,
+            'event_type': self.event_type,
             'aggregates': self.aggregates
         }
 
@@ -62,6 +68,7 @@ class ReaperRequest(object):
             and self.image == other.image
             and self.project_id == other.project_id
             and self.resources == other.resources
+            and self.event_type == other.event_type
         )
 
 
@@ -70,6 +77,7 @@ class StateCalculationRequest(object):
     def __init__(self, aggregates):
         self.req_type = self.__class__.__name__
         self.aggregates = aggregates
+        self.event_type = reaper_action.ActionEvent.STATE_CALCULATION
 
     @staticmethod
     def from_primitive(primitive):

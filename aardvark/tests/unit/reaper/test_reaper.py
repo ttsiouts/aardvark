@@ -37,18 +37,13 @@ class ReaperTests(base.TestCase):
     def _init_reaper(self, mock_placement, mock_novaclient):
         return reaper.Reaper()
 
-    def test_evaluate_reaper_request(self):
+    def test_handle_reaper_request(self):
         # create a request with no aggregates
         uuids = ['instance1', 'instance2']
         image = 'fake_image'
         request = fakes.make_reaper_request(uuids=uuids, image=image)
-        self.reaper.aggregates = ['aggregate_1']
-        self.assertNotEqual(self.reaper.aggregates, request.aggregates)
-        with mock.patch.object(self.reaper, 'handle_reaper_request'):
-            self.reaper.evaluate_reaper_request(request)
-            # Make sure that the request has the aggregates of the reaper
-            # instance.
-            self.assertEqual(self.reaper.aggregates, request.aggregates)
+        with mock.patch.object(self.reaper, '_do_handle_reaper_request'):
+            self.reaper.handle_reaper_request(request)
             self.reaper.novaclient.assert_has_calls([
                 mock.call.servers.rebuild('instance1', image),
                 mock.call.servers.rebuild('instance2', image)
@@ -56,17 +51,15 @@ class ReaperTests(base.TestCase):
             self.assertTrue(
                 not self.reaper.novaclient.servers.reset_state.called)
 
-    def test_evaluate_reaper_request_error(self):
+    def test_handle_reaper_request_error(self):
         uuids = ['instance1', 'instance2']
         request = fakes.make_reaper_request(uuids=uuids)
         self.reaper.aggregates = ['aggregate_1']
         self.assertNotEqual(self.reaper.aggregates, request.aggregates)
-        with mock.patch.object(self.reaper, 'handle_reaper_request') as moc:
-            moc.side_effect = exception.AardvarkException()
-            self.reaper.evaluate_reaper_request(request)
-            # Make sure that the request has the aggregates of the reaper
-            # instance.
-            self.assertEqual(self.reaper.aggregates, request.aggregates)
+        with mock.patch.object(self.reaper, '_do_handle_reaper_request') as m:
+            m.side_effect = exception.PreemptibleRequest()
+            self.assertRaises(exception.PreemptibleRequest,
+                             self.reaper.handle_reaper_request, request)
             self.assertTrue(not self.reaper.novaclient.servers.rebuild.called)
             self.reaper.novaclient.assert_has_calls([
                 mock.call.servers.reset_state('instance1'),
@@ -74,14 +67,19 @@ class ReaperTests(base.TestCase):
             ], any_order=True)
 
     @mock.patch('aardvark.objects.system.System')
-    def test_handle_reaper_request(self, system_mock):
+    def test_do_handle_reaper_request(self, system_mock):
         project_id = 'preemptible1'
         project = [mock.Mock(_id=project_id)]
+        self.reaper.aggregates = ['aggregate_1']
         mocked_system = mock.Mock(preemptible_projects=project)
         system_mock.return_value = mocked_system
         request = fakes.make_reaper_request(project="project1")
+        self.assertNotEqual(self.reaper.aggregates, request.aggregates)
         with mock.patch.object(self.reaper, 'free_resources') as mocked:
-            self.reaper.handle_reaper_request(request)
+            self.reaper._do_handle_reaper_request(request)
+            # Make sure that the request has the aggregates of the reaper
+            # instance.
+            self.assertEqual(self.reaper.aggregates, request.aggregates)
             mocked.assert_called_once()
 
     @mock.patch('aardvark.objects.system.System')
@@ -146,22 +144,11 @@ class ReaperTests(base.TestCase):
             self.assertRaises(exception.RetriesExceeded,
                               self.reaper.free_resources, request, system)
 
-    # def test_attempt_job_claim(self):
-    #     request = fakes.make_calculation_request()
-    #     job = mock.Mock(details=request.to_dict())
-    #     itermock = mock.Mock(return_value=[job])
-    #     board = mock.Mock(iterjobs=itermock)
-    #     self.reaper._is_running = mock.Mock()
-    #     self.reaper._is_running.side_effect = ['True', 'False']
-    #     with mock.patch.object(self.reaper, 'handle_request') as mocked:
-    #         self.reaper.attempt_job_claim(board)
-    #         mocked.assert_called_once()
-    #         mocked.assert_called_with(request)
-
-    def test_handle_request(self):
+    @mock.patch("aardvark.reaper.reaper_action.ReaperAction")
+    def test_handle_request(self, reaper_action):
         reaper_request = fakes.make_reaper_request()
         calculation_request = fakes.make_calculation_request()
-        with mock.patch.object(self.reaper, 'evaluate_reaper_request') as m:
+        with mock.patch.object(self.reaper, 'handle_reaper_request') as m:
             self.reaper.handle_request(reaper_request)
             m.assert_called_once_with(reaper_request)
         with mock.patch.object(

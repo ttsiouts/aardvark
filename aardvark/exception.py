@@ -99,3 +99,11 @@ class StateUpdateEventAlreadyExists(DBException):
 
 class StateUpdateEventNotFound(DBException):
     message = "State update event for instance %(uuid)s was not found."
+
+
+class ReaperActionAlreadyExists(DBException):
+    message = "Reaper action already exists."
+
+
+class ReaperActionNotFound(DBException):
+    message = "Reaper action with uuid %(uuid)s not found."

@@ -158,7 +158,7 @@ class Connection(api.Connection):
             raise exception.StateUpdateEventAlreadyExists()
         return event
 
-    def get_instance_state_update_event(self, instance_uuid, handled=False):
+    def get_state_update_event_by_instance(self, instance_uuid, handled=False):
         query = model_query(models.StateUpdateEvent)
         query = query.filter_by(instance_uuid=instance_uuid)
         query = query.filter_by(handled=handled)
@@ -166,6 +166,14 @@ class Connection(api.Connection):
             return query.one()
         except NoResultFound:
             raise exception.StateUpdateEventNotFound(uuid=instance_uuid)
+
+    def get_state_update_event_by_uuid(self, uuid):
+        query = model_query(models.StateUpdateEvent)
+        query = query.filter_by(uuid=uuid)
+        try:
+            return query.one()
+        except NoResultFound:
+            raise exception.StateUpdateEventNotFound(uuid=uuid)
 
     def update_instance_state_update_event(self, event_uuid, instance_uuid,
                                            values):
@@ -178,5 +186,54 @@ class Connection(api.Connection):
                 ref = query.with_lockmode('update').one()
             except NoResultFound:
                 raise exception.StateUpdateEventNotFound(uuid=event_uuid)
+            ref.update(values)
+        return ref
+
+    def create_reaper_action(self, values):
+        if 'uuid' not in values:
+            values['uuid'] = uuidutils.generate_uuid()
+        action = models.ReaperAction()
+        action.update(values)
+        try:
+            action.save()
+        except db_exc.DBDuplicateEntry:
+            raise exception.ReaperActionAlreadyExists()
+        return action
+
+    def get_reaper_action_by_uuid(self, uuid):
+        query = model_query(models.ReaperAction)
+        query = query.filter_by(uuid=uuid)
+        try:
+            return query.one()
+        except NoResultFound:
+            raise exception.ReaperActionNotFound(uuid=uuid)
+
+    def list_reaper_actions(self):
+        query = model_query(models.ReaperAction)
+        try:
+            return query.all()
+        except NoResultFound:
+            return []
+
+    def get_reaper_action_by_instance(self, uuid):
+        query = model_query(models.ReaperAction)
+        query = query.filter(
+            models.ReaperAction.requested_instances.contains([uuid]))
+        return query.all()
+
+    def get_reaper_action_by_victim(self, uuid):
+        query = model_query(models.ReaperAction)
+        query = query.filter(models.ReaperAction.victims.contains([uuid]))
+        return query.all()
+
+    def update_reaper_action(self, uuid, values):
+        session = get_session()
+        with session.begin():
+            query = model_query(models.ReaperAction, session=session)
+            query = query.filter_by(uuid=uuid)
+            try:
+                ref = query.with_lockmode('update').one()
+            except NoResultFound:
+                raise exception.ReaperActionNotFound(uuid=uuid)
             ref.update(values)
         return ref

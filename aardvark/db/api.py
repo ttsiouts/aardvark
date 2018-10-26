@@ -76,10 +76,38 @@ class Connection(object):
         """Create a state_update_event"""
 
     @abc.abstractmethod
-    def get_instance_state_update_event(self, instance_uuid, handled=False):
+    def get_state_update_event_by_instance(self, instance_uuid, handled=False):
         """Get a state_update_event based on the instance_uuid"""
+
+    @abc.abstractmethod
+    def get_state_update_event_by_uuid(self, uuid):
+        """Get a state_update_event based on the uuid"""
 
     @abc.abstractmethod
     def update_instance_state_update_event(self, event_uuid, instance_uuid,
                                            values):
         """Update a state update event"""
+
+    @abc.abstractmethod
+    def create_reaper_action(self, values):
+        """Create a reaper action"""
+
+    @abc.abstractmethod
+    def get_reaper_action_by_uuid(self, uuid):
+        """Get a reaper action by uuid"""
+
+    @abc.abstractmethod
+    def list_reaper_actions(self):
+        """List reaper actions"""
+
+    @abc.abstractmethod
+    def get_reaper_action_by_instance(self, uuid):
+        """Get a reaper action by requested instance uuid"""
+
+    @abc.abstractmethod
+    def get_reaper_action_by_victim(self, uuid):
+        """Get a reaper action by victim instance uuid"""
+
+    @abc.abstractmethod
+    def update_reaper_action(self, uuid, values):
+        """Update a reaper action"""
