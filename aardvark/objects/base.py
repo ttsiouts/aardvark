@@ -85,4 +85,33 @@ class PlacementObjectWrapper(BaseObjectWrapper):
 
 class PersistentObject(object):
     """Base class for all objects stored in aardvark DB"""
-    pass
+
+    fields = []
+    db_map = {}
+
+    def __init__(self):
+        object.__setattr__(self, 'changes', {})
+
+    def __setattr__(self, attr, value):
+        self.changes[attr] = value
+        super(PersistentObject, self).__setattr__(attr, value)
+
+    def reset_changes(self):
+        self.changes = {}
+
+    @classmethod
+    def from_db_object(cls, db_object):
+        obj = cls()
+        for field in cls.fields:
+            try:
+                if field not in cls.db_map:
+                    value = getattr(db_object, field)
+                else:
+                    value = getattr(db_object, cls.db_map[field])
+            except TypeError:
+                value = None
+            setattr(obj, field, value)
+        return obj
+
+    def obj_get_changes(self):
+        return self.changes

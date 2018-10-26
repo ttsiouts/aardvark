@@ -13,18 +13,20 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from aardvark.reaper import reaper_action
 from aardvark.reaper import reaper_request
 from aardvark.tests.unit.objects import fakes as object_fakes
 
 
 def make_reaper_request(uuids=None, project=None, resources=None,
-                        image=None, aggregates=None):
+                        image=None, event_type=None, aggregates=None):
     uuids = uuids or ['instance_uuid']
     project = project or ['project_id']
     resources = resources or object_fakes.make_resources()
     image = image or "image_uuid"
-    return reaper_request.ReaperRequest(uuids, project, resources,
-                                        image, aggregates=aggregates)
+    event_type = event_type or reaper_action.ActionEvent.BUILD_REQUEST
+    return reaper_request.ReaperRequest(uuids, project, resources, image,
+                                        event_type, aggregates=aggregates)
 
 
 def make_calculation_request(aggregates=None):

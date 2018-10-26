@@ -24,6 +24,7 @@ from aardvark.api.rest import placement
 import aardvark.conf
 from aardvark import exception
 from aardvark.objects import system as system_obj
+from aardvark.reaper import reaper_action as ra
 from aardvark.reaper import reaper_request as rr_obj
 from aardvark import utils
 
@@ -42,6 +43,36 @@ def while_running(fn):
     def wrapper(self, board):
         while self.flag:
             fn(self, board)
+    return wrapper
+
+
+def reaper_action(fn):
+    @functools.wraps(fn)
+    def wrapper(self, request):
+        action = ra.ReaperAction()
+        if isinstance(request, rr_obj.ReaperRequest):
+            action.requested_instances = request.uuids
+            action.event = request.event_type
+        else:
+            action.event = ra.ActionEvent.STATE_CALCULATION
+        action.state = ra.ActionState.ONGOING
+        action.create()
+        LOG.info("Reaper action %s started", action.uuid)
+        try:
+            victims = fn(self, request)
+            action.victims = victims
+            action.state = ra.ActionState.SUCCESS
+            LOG.info("Reaper action %s completed successfully", action.uuid)
+        except exception.PreemptibleRequest as pr:
+            action.state = ra.ActionState.CANCELED
+            action.fault_reason = pr.message
+            LOG.info("Reaper action %s canceled: %s", action.uuid, pr.message)
+        except exception.AardvarkException as e:
+            action.state = ra.ActionState.FAILED
+            action.fault_reason = e.message
+            LOG.info("Reaper action %s failed: %s", action.uuid, e.message)
+        finally:
+            action.update()
     return wrapper
 
 
@@ -68,23 +99,17 @@ class Reaper(object):
             invoke_on_load=True,
             invoke_args=tuple([watermark_mode])).driver
 
-    def evaluate_reaper_request(self, request):
-        # If we receive a request without explicit aggregates
-        # set the aggregates of the request to self.aggregates
-        # so that we don't invalidate the system state of
-        # other worker threads by altering the state of resource
-        # providers originally not watched by this thread.
-        if request.aggregates == [] and self.aggregates[0] != []:
-            request.aggregates = self.aggregates
-
+    def handle_reaper_request(self, request):
         try:
-            self.handle_reaper_request(request)
+            victims = self._do_handle_reaper_request(request)
             self._rebuild_instances(request.uuids, request.image)
+            return victims
         except exception.AardvarkException as e:
             LOG.error(e.message)
             self._reset_instances(request.uuids)
+            raise
 
-    def handle_reaper_request(self, request):
+    def _do_handle_reaper_request(self, request):
         """Main functionality of the Reaper
 
         Gathers info and tries to free up the requested resources.
@@ -92,6 +117,13 @@ class Reaper(object):
         :param req_spec: the request specification for the spawning server
         :param resources: the requested resources
         """
+        # If we receive a request without explicit aggregates
+        # set the aggregates of the request to self.aggregates
+        # so that we don't invalidate the system state of
+        # other worker threads by altering the state of resource
+        # providers originally not watched by this thread.
+        if request.aggregates == [] and self.aggregates[0] != []:
+            request.aggregates = self.aggregates
 
         system = system_obj.System(request.aggregates)
 
@@ -103,8 +135,7 @@ class Reaper(object):
             # Make space only if the requesting project is
             # non-preemptible.
             raise exception.PreemptibleRequest()
-
-        self.free_resources(request.resources, system, slots=slots)
+        return self.free_resources(request.resources, system, slots=slots)
 
     def handle_state_calculation_request(self, request):
 
@@ -118,8 +149,8 @@ class Reaper(object):
                 CONF.aardvark.watermark)
 
             try:
-                self.free_resources(resource_request, system,
-                                    watermark_mode=True)
+                return self.free_resources(resource_request, system,
+                                           watermark_mode=True)
             except exception.RetriesExceeded:
                 LOG.error("Retries exceeded while freeing resources to "
                           "maintain system usage below %s%. Aborting.",
@@ -152,7 +183,10 @@ class Reaper(object):
 
         # We have to wait until the allocations are removed
         uuids = [s.uuid for s in selected_servers]
-        self.wait_until_allocations_are_deleted(uuids)
+        if len(uuids) > 0:
+            self.wait_until_allocations_are_deleted(uuids[:])
+
+        return uuids
 
     def notify_about_instance(self, instance):
         # Notify with the configured notification system before deleting.
@@ -198,13 +232,14 @@ class Reaper(object):
             board.consume(job, "worker")
             LOG.debug("Consumed %s", job)
 
+    @reaper_action
     def handle_request(self, request):
 
         if isinstance(request, rr_obj.ReaperRequest):
-            self.evaluate_reaper_request(request)
+            return self.handle_reaper_request(request)
 
         elif isinstance(request, rr_obj.StateCalculationRequest):
-            self.handle_state_calculation_request(request)
+            return self.handle_state_calculation_request(request)
 
     def stop_handling(self):
         self.flag = False

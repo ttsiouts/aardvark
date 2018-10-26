@@ -21,6 +21,7 @@ from aardvark import exception
 from aardvark.notifications import base as base_obj
 from aardvark.notifications import endpoints
 from aardvark.notifications import events
+from aardvark.reaper import reaper_action as ra
 from aardvark.tests.unit.db import base
 from aardvark.tests.unit.notifications import fakes
 
@@ -96,7 +97,7 @@ class StateUpdateEndpointTests(EndpointsTests):
     def _init_mocked_endpoint(self, mock_job_manager, mock_novaclient):
         return endpoints.StateUpdateEndpoint()
 
-    def test_requeue_on_missing_scheduling_info(self):
+    def test_handled_on_missing_scheduling_info(self):
         instance = "instance_uuid"
         new_state = "pending"
         old_state = "building"
@@ -109,7 +110,7 @@ class StateUpdateEndpointTests(EndpointsTests):
         with mock.patch.object(self.endpoint, 'trigger_reaper') as trigger:
             trigger.side_effect = exception.RetriesExceeded
             action = self.endpoint.info(None, None, None, payload, None)
-            self.assertEqual(self.endpoint.requeue(), action)
+            self.assertEqual(self.endpoint.handled(), action)
 
     def test_not_to_pending(self):
         instance = "instance_uuid"
@@ -131,7 +132,7 @@ class StateUpdateEndpointTests(EndpointsTests):
         old_state = "building"
         image_uuid = "image_uuid"
         flavor_uuid = "flavor_uuid"
-        e_type = "build"
+        e_type = ra.ActionEvent.BUILD_REQUEST
 
         payload = fakes.make_state_update_payload(
             instance, new_state, old_state, image_uuid, flavor_uuid)
@@ -151,7 +152,7 @@ class StateUpdateEndpointTests(EndpointsTests):
         new_task = None
         image_uuid = "image_uuid"
         flavor_uuid = "flavor_uuid"
-        e_type = "rebuild"
+        e_type = ra.ActionEvent.REBUILD_REQUEST
 
         payload = fakes.make_state_update_payload(
             instance, new_state, old_state, image_uuid, flavor_uuid,
@@ -170,7 +171,7 @@ class StateUpdateEndpointTests(EndpointsTests):
         old_state = "building"
         image_uuid = "image_uuid"
         flavor_uuid = "flavor_uuid"
-        e_type = "build"
+        e_type = ra.ActionEvent.BUILD_REQUEST
 
         scheduling_payload = fakes.make_scheduling_payload([instance])
         scheduling_event = events.SchedulingEvent.from_payload(
@@ -191,7 +192,7 @@ class StateUpdateEndpointTests(EndpointsTests):
         image_uuid = "image_uuid"
         flavor_uuid = "flavor_uuid"
         request_id = 123
-        e_type = "build"
+        e_type = ra.ActionEvent.BUILD_REQUEST
 
         scheduling_payload = fakes.make_scheduling_payload(instances,
                                                            req_id=request_id)
@@ -215,7 +216,7 @@ class StateUpdateEndpointTests(EndpointsTests):
         old_state = "building"
         image_uuid = "image_uuid"
         flavor_uuid = "flavor_uuid"
-        event_type = "build"
+        event_type = ra.ActionEvent.BUILD_REQUEST
 
         scheduling_payload = fakes.make_scheduling_payload([instance])
         scheduling_event = events.SchedulingEvent.from_payload(

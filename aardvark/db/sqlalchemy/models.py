@@ -20,13 +20,16 @@ from oslo_db.sqlalchemy.types import String
 import six.moves.urllib.parse as urlparse
 from sqlalchemy import Boolean
 from sqlalchemy import Column
+from sqlalchemy import Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Integer
 from sqlalchemy import schema
+from sqlalchemy import Text
 from sqlalchemy.types import TypeDecorator, TEXT
 from sqlalchemy import orm
 
 import aardvark.conf
+from aardvark.reaper import reaper_action as ra
 
 
 CONF = aardvark.conf.CONF
@@ -154,3 +157,21 @@ class StateUpdateEvent(Base):
     image = Column(String(36))
     flavor = Column(JSONEncodedDict)
     handled = Column(Boolean, default=False)
+
+
+class ReaperAction(Base):
+    """Represents a Reaper Action"""
+
+    __tablename__ = 'reaper_action'
+    __table_args__ = (
+        schema.UniqueConstraint('uuid', name='uniq_action0uuid'),
+        table_args()
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    uuid = Column(String(36))
+    state = Column(Enum(ra.ActionState))
+    requested_instances = Column(JSONEncodedList, nullable=True)
+    fault_reason = Column(Text, nullable=True)
+    victims = Column(JSONEncodedList, nullable=True)
+    event = Column(Enum(ra.ActionEvent))
