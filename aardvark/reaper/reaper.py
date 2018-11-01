@@ -74,7 +74,7 @@ class Reaper(object):
         # so that we don't invalidate the system state of
         # other worker threads by altering the state of resource
         # providers originally not watched by this thread.
-        if request.aggregates == []:
+        if request.aggregates == [] and self.aggregates[0] != []:
             request.aggregates = self.aggregates
 
         try:
