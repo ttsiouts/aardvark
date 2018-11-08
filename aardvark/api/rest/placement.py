@@ -38,29 +38,6 @@ def exception_map(f):
     return wrapper
 
 
-def object_map(f):
-    """Catches keystone exceptions
-    """
-    @exception_map
-    def map_response_to_object(self, *a, **k):
-        """Maps Placement response to object"""
-        response, obj = f(self, *a, **k)
-
-        if not response:
-            return None
-
-        json = response.json()
-        if not obj:
-            return json
-
-        # Map the json to the given object
-        module = __import__('aardvark.objects')
-        cls = getattr(module, obj)
-        return cls.from_dict()
-
-    return map_response_to_object
-
-
 class PlacementClient(object):
     """Client class for querying Placement API"""
 
