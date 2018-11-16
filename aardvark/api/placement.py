@@ -14,7 +14,6 @@
 #    under the License.
 
 from aardvark.api.rest import placement
-from aardvark.objects import resource_provider as rp_obj
 from aardvark.objects import resources
 
 
@@ -25,6 +24,7 @@ def _get_placement_client():
 def get_resource_providers(aggregates=None):
     client = _get_placement_client()
     result = client.resource_providers(aggregates)
+    from aardvark.objects import resource_provider as rp_obj
     return [rp_obj.ResourceProvider(rp['uuid'], rp['name'])
             for rp in result]
 

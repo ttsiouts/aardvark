@@ -13,12 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from aardvark.api import keystone
 from aardvark.objects import base
 
 
-class Project(object):
-
-    _attrs = ['id_', 'name', 'preemptible']
+class Project(base.BaseObject):
 
     def __init__(self, id_, name, preemptible=False):
         self.id_ = id_
@@ -26,9 +25,11 @@ class Project(object):
         self.preemptible = preemptible
 
 
-class ProjectList(base.BaseObjectWrapper):
-
-    _attrs = ['projects', 'preemptible_projects']
+class ProjectList(base.BaseObject):
 
     def __init__(self):
         super(ProjectList, self).__init__()
+
+    @property
+    def preemptible_projects(self):
+        return keystone.get_preemptible_projects()

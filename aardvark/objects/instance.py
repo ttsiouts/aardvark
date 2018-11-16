@@ -13,13 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from aardvark.api import nova
 from aardvark.objects import base
 from aardvark.objects import resources
 
 
-class Instance(base.BaseObjectWrapper):
-
-    _attrs = ['name', 'uuid', 'flavor']
+class Instance(base.BaseObject):
 
     def __init__(self, uuid, name, flavor):
         super(Instance, self).__init__(uuid, name, flavor)
@@ -32,16 +31,15 @@ class Instance(base.BaseObjectWrapper):
         return resources.Resources.obj_from_flavor(self.flavor)
 
 
-class InstanceList(base.BaseObjectWrapper):
-
-    _attrs = ['instances']
+class InstanceList(base.BaseObject):
 
     def __init__(self):
         super(InstanceList, self).__init__()
 
     def instances(self, **filters):
-        instances = self._resource.instances(**filters)
-        return instances
+        if 'project_id' in filters:
+            filters.update({'all_tenants': True})
+        return nova.server_list(**filters)
 
     def delete_instance(self, instance):
-        self._resource.delete_instance(instance)
+        nova.server_delete(instance)

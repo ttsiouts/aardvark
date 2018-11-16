@@ -175,8 +175,6 @@ class Reaper(object):
             except n_exc.NotFound:
                 # One of the selected servers was not found so, we will retry
                 LOG.info("Server %s not found. Retrying.", server.name)
-                # Emptying the cached in order to retry.
-                system.empty_cache()
                 raise exception.RetryException()
 
         # We have to wait until the allocations are removed

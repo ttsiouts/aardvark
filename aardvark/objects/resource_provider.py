@@ -13,7 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from aardvark.api import placement
 from aardvark.objects import base
+from aardvark.objects import capabilities
 from aardvark.objects import instance
 from aardvark.objects import resources
 
@@ -23,15 +25,33 @@ from oslo_log import log
 LOG = log.getLogger(__name__)
 
 
-class ResourceProvider(base.PlacementObjectWrapper):
-
-    _attrs = ['uuid', 'name', 'usages', 'capabilities']
+class ResourceProvider(base.PlacementObject):
 
     def __init__(self, uuid, name):
         super(ResourceProvider, self).__init__(uuid=uuid, name=name)
         self.uuid = uuid
         self.name = name
         self._preemptible_servers = list()
+        self._capabilities = None
+
+    @property
+    def usages(self):
+        return placement.get_resource_provider_usages(self.uuid)
+
+    @property
+    def inventories(self):
+        return placement.get_resource_provider_inventories(self.uuid)
+
+    @property
+    def resource_classes(self):
+        return placement.get_resource_classes()
+
+    @property
+    def capabilities(self):
+        if not self._capabilities:
+            self._capabilities = capabilities.Capabilities(self.usages,
+                                                           self.inventories)
+        return self._capabilities
 
     @property
     def preemptible_servers(self):
@@ -90,10 +110,12 @@ class ResourceProvider(base.PlacementObjectWrapper):
         self.preemptible_servers = servers
 
 
-class ResourceProviderList(base.PlacementObjectWrapper):
-
-    _attrs = ['resource_providers']
+class ResourceProviderList(base.PlacementObject):
 
     def __init__(self, aggregates=None):
         super(ResourceProviderList, self).__init__(aggregates=aggregates)
         self.aggregates = aggregates
+
+    @property
+    def resource_providers(self):
+        return placement.get_resource_providers(self.aggregates)

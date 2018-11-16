@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
-
 from aardvark.objects import capabilities
 from aardvark.objects import resource_provider
 from aardvark.objects import resources
@@ -63,7 +61,6 @@ def make_resource_provider(uuid=None, name=None, capabilities=None):
     uuid = uuid or 'fake_rp_uuid'
     name = name or 'fake_rp_name'
     capabilities = capabilities or make_capabilities()
-    with mock.patch('aardvark.objects.base.PlacementObjectWrapper'):
-        rp = resource_provider.ResourceProvider(uuid, name)
-        rp.capabilities = capabilities
-        return rp
+    rp = resource_provider.ResourceProvider(uuid, name)
+    rp._capabilities = capabilities
+    return rp

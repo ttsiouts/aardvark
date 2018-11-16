@@ -44,7 +44,6 @@ class System(object):
         for rp in self.resource_providers:
             total_resources += rp.total_resources
             used_resources += rp.used_resources
-            rp.reinit_object()
 
         return capabilities.Capabilities(used_resources, total_resources)
 
@@ -60,7 +59,3 @@ class System(object):
                 }
                 servers += instance_list.instances(**filters)
             rp.preemptible_servers = servers
-
-    def empty_cache(self):
-        self._rp_list.reinit_object()
-        self._project_list.reinit_object()
