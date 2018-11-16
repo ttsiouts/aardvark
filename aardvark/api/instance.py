@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from aardvark.api.rest import nova
+from aardvark.api import nova
 from aardvark.objects import instance
 
 
@@ -27,14 +27,10 @@ class Instance(object):
 
 class InstanceList(object):
 
-    def __init__(self):
-        self.client = nova.novaclient()
-
     def instances(self, **filters):
         if 'project_id' in filters:
             filters.update({'all_tenants': True})
-        return [instance.Instance(server.id, server.name, server.flavor)
-                for server in self.client.servers.list(search_opts=filters)]
+        return nova.server_list(**filters)
 
     def delete_instance(self, instance):
-        self.client.servers.delete(instance.uuid)
+        nova.server_delete(instance)

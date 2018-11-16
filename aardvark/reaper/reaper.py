@@ -19,8 +19,8 @@ from novaclient import exceptions as n_exc
 from stevedore import driver
 import time
 
-from aardvark.api.rest import nova
-from aardvark.api.rest import placement
+from aardvark.api import nova
+from aardvark.api import placement
 import aardvark.conf
 from aardvark import exception
 from aardvark.objects import system as system_obj
@@ -82,8 +82,6 @@ class Reaper(object):
     This class decides which preemptible servers have to be terminated.
     """
     def __init__(self, aggregates=None):
-        self.novaclient = nova.novaclient()
-        self.placement = placement.PlacementClient()
         self.worker = None
         self.missed_acks = 0
 
@@ -173,7 +171,7 @@ class Reaper(object):
             try:
                 LOG.info("Trying to delete server: %s", server.name)
                 self.notify_about_instance(server)
-                self.novaclient.servers.delete(server.uuid)
+                nova.server_delete(server.uuid)
             except n_exc.NotFound:
                 # One of the selected servers was not found so, we will retry
                 LOG.info("Server %s not found. Retrying.", server.name)
@@ -248,7 +246,7 @@ class Reaper(object):
         for uuid in uuids:
             try:
                 LOG.info("Trying to rebuild server with uuid: %s", uuid)
-                self.novaclient.servers.rebuild(uuid, image)
+                nova.server_rebuild(uuid, image)
             except n_exc.NotFound:
                 # Looks like we were late, and the server is deleted.
                 # Nothing more we can do.
@@ -260,7 +258,7 @@ class Reaper(object):
         for uuid in uuids:
             try:
                 LOG.info('Trying to reset server %s to error', uuid)
-                self.novaclient.servers.reset_state(uuid)
+                nova.server_reset_state(uuid)
             except n_exc.NotFound:
                 # Looks like we were late, and the server is deleted.
                 # Nothing more we can do.
@@ -291,7 +289,7 @@ class Reaper(object):
         while now - start <= timeout:
             not_found = False
             for uuid in uuids:
-                resp = self.placement.get_allocations(uuid)
+                resp = placement.get_consumer_allocations(uuid)
                 if resp['allocations'] == {}:
                     not_found = True
                     break

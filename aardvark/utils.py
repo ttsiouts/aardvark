@@ -21,7 +21,7 @@ from oslo_concurrency import lockutils
 from oslo_log import log
 import time
 
-from aardvark.api.rest import nova
+from aardvark.api import nova
 import aardvark.conf
 from aardvark import exception
 
@@ -106,9 +106,8 @@ class SafeDict(dict):
 
 def map_aggregate_names():
     """Maps aggregate names to uuids"""
-    novaclient = nova.novaclient()
     aggregate_map = {
-        agg.name: agg.uuid for agg in novaclient.aggregates.list()
+        agg.name: agg.uuid for agg in nova.aggregate_list()
     }
     uuids = []
     for aggregates in CONF.reaper.watched_aggregates:

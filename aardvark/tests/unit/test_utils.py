@@ -44,8 +44,8 @@ class UtilsTests(base.TestCase):
         decorated_mocked_method()
         self.assertEqual(mocked_method.call_count, 3)
 
-    @mock.patch('aardvark.api.rest.nova.novaclient')
-    def test_map_aggregate_names(self, mock_novaclient):
+    @mock.patch('aardvark.api.nova.aggregate_list')
+    def test_map_aggregate_names(self, mock_agg_list):
 
         aggregates = [
             mock.Mock(uuid="agg1_uuid"),
@@ -54,15 +54,13 @@ class UtilsTests(base.TestCase):
         aggregates[0].name = "agg1"
         aggregates[1].name = "agg2"
         CONF.reaper.watched_aggregates = ["agg1", "agg2"]
-        list_method = mock.Mock(return_value=aggregates)
-        mock_aggs = mock.Mock(list=list_method)
-        mock_novaclient.return_value = mock.Mock(aggregates=mock_aggs)
+        mock_agg_list.return_value = aggregates
 
         uuids = utils.map_aggregate_names()
         self.assertEqual([["agg1_uuid"], ["agg2_uuid"]], uuids)
 
-    @mock.patch('aardvark.api.rest.nova.novaclient')
-    def test_map_aggregate_names_bad_config(self, mock_novaclient):
+    @mock.patch('aardvark.api.nova.aggregate_list')
+    def test_map_aggregate_names_bad_config(self, mock_agg_list):
 
         aggregates = [
             mock.Mock(uuid="agg1_uuid"),
@@ -71,9 +69,7 @@ class UtilsTests(base.TestCase):
         aggregates[0].name = "agg1"
         aggregates[1].name = "agg2"
         CONF.reaper.watched_aggregates = ["agg3"]
-        list_method = mock.Mock(return_value=aggregates)
-        mock_aggs = mock.Mock(list=list_method)
-        mock_novaclient.return_value = mock.Mock(aggregates=mock_aggs)
+        mock_agg_list.return_value = aggregates
 
         self.assertRaises(exception.BadConfigException,
                           utils.map_aggregate_names)

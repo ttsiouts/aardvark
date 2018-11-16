@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from aardvark.api.rest import nova
+from aardvark.api import nova
 from aardvark import exception
 from aardvark.notifications import base
 from aardvark.notifications import events
@@ -56,7 +56,6 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
 
     def __init__(self):
         super(StateUpdateEndpoint, self).__init__()
-        self.novaclient = nova.novaclient()
         self.job_manager = job_manager.JobManager()
 
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
@@ -127,7 +126,7 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
         for uuid in uuids:
             try:
                 LOG.info('Trying to reset server %s to error', uuid)
-                self.novaclient.servers.reset_state(uuid)
+                nova.server_reset_state(uuid)
             except n_exc.NotFound:
                 # Looks like we were late, and the server is deleted.
                 # Nothing more we can do.

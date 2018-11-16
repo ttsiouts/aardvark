@@ -32,26 +32,28 @@ class ReaperTests(base.TestCase):
         super(ReaperTests, self).setUp()
         self.reaper = self._init_reaper()
 
-    @mock.patch('aardvark.api.rest.nova.novaclient')
-    @mock.patch('aardvark.api.rest.placement.PlacementClient')
+    @mock.patch('aardvark.api.nova')
+    @mock.patch('aardvark.api.placement')
     def _init_reaper(self, mock_placement, mock_novaclient):
         return reaper.Reaper()
 
-    def test_handle_reaper_request(self):
+    @mock.patch('aardvark.api.nova.server_rebuild')
+    @mock.patch('aardvark.api.nova.server_reset_state')
+    def test_handle_reaper_request(self, mock_reset, mock_rebuild):
         # create a request with no aggregates
         uuids = ['instance1', 'instance2']
         image = 'fake_image'
         request = fakes.make_reaper_request(uuids=uuids, image=image)
         with mock.patch.object(self.reaper, '_do_handle_reaper_request'):
             self.reaper.handle_reaper_request(request)
-            self.reaper.novaclient.assert_has_calls([
-                mock.call.servers.rebuild('instance1', image),
-                mock.call.servers.rebuild('instance2', image)
+            mock_rebuild.assert_has_calls([
+                mock.call('instance1', image), mock.call('instance2', image)
             ], any_order=True)
-            self.assertTrue(
-                not self.reaper.novaclient.servers.reset_state.called)
+            self.assertTrue(not mock_reset.called)
 
-    def test_handle_reaper_request_error(self):
+    @mock.patch('aardvark.api.nova.server_rebuild')
+    @mock.patch('aardvark.api.nova.server_reset_state')
+    def test_handle_reaper_request_error(self, mock_reset, mock_rebuild):
         uuids = ['instance1', 'instance2']
         request = fakes.make_reaper_request(uuids=uuids)
         self.reaper.aggregates = ['aggregate_1']
@@ -60,11 +62,10 @@ class ReaperTests(base.TestCase):
             m.side_effect = exception.PreemptibleRequest()
             self.assertRaises(exception.PreemptibleRequest,
                              self.reaper.handle_reaper_request, request)
-            self.assertTrue(not self.reaper.novaclient.servers.rebuild.called)
-            self.reaper.novaclient.assert_has_calls([
-                mock.call.servers.reset_state('instance1'),
-                mock.call.servers.reset_state('instance2')
+            mock_reset.assert_has_calls([
+                mock.call('instance1'), mock.call('instance2')
             ], any_order=True)
+            self.assertTrue(not mock_rebuild.called)
 
     @mock.patch('aardvark.objects.system.System')
     def test_do_handle_reaper_request(self, system_mock):
@@ -106,7 +107,9 @@ class ReaperTests(base.TestCase):
             self.reaper.handle_state_calculation_request(request)
             self.assertTrue(not mocked.called)
 
-    def test_free_resources(self):
+    @mock.patch('aardvark.api.nova.server_delete')
+    @mock.patch('aardvark.api.placement.get_consumer_allocations')
+    def test_free_resources(self, mock_allocs, mock_delete):
         mock_projects = [mock.Mock(id_=1), mock.Mock(id_=2)]
         system = mock.Mock(preemptible_projects=mock_projects)
         request = fakes.make_reaper_request()
@@ -117,21 +120,21 @@ class ReaperTests(base.TestCase):
             server.name = server.uuid
         mocked_return = mock.Mock(return_value=(hosts, servers))
         not_found = {'allocations': {}}
-        self.reaper.placement.get_allocations.return_value = not_found
+        mock_allocs.return_value = not_found
         mock_strategy = mock.Mock(get_preemptible_servers=mocked_return)
         with mock.patch.object(self.reaper, '_load_configured_strategy') as m:
             m.return_value = mock_strategy
             self.reaper.free_resources(request, system)
-            self.reaper.novaclient.assert_has_calls([
-                mock.call.servers.delete('server1'),
-                mock.call.servers.delete('server2')
+            mock_delete.assert_has_calls([
+                mock.call('server1'), mock.call('server2')
             ], any_order=True)
 
-    def test_free_resources_not_found_server(self):
+    @mock.patch('aardvark.api.nova.server_delete')
+    def test_free_resources_not_found_server(self, mock_delete):
         mock_projects = [mock.Mock(id_=1), mock.Mock(id_=2)]
         system = mock.Mock(preemptible_projects=mock_projects)
         request = fakes.make_reaper_request()
-        self.reaper.novaclient.servers.delete.side_effect = n_exc.NotFound("")
+        mock_delete.side_effect = n_exc.NotFound("")
         hosts = ['host1']
         servers = [mock.Mock(uuid='server1'), mock.Mock(uuid='server2')]
         # Hack for mock's limitation with the name attribute
@@ -177,9 +180,10 @@ class ReaperTests(base.TestCase):
         self.assertRaises(exception.UnwatchedAggregate,
                           self.reaper._check_requested_aggregates, aggregates)
 
-    def test_wait_until_allocations_are_deleted(self):
+    @mock.patch('aardvark.api.placement.get_consumer_allocations')
+    def test_wait_until_allocations_are_deleted(self, mock_allocs):
         uuids = ['uuid1', 'uuid2']
-        self.reaper.placement.get_allocations.side_effect = [
+        mock_allocs.side_effect = [
             {'allocations': {}},
             {'allocations': 'allocations_found'},
             {'allocations': {}}
@@ -188,7 +192,7 @@ class ReaperTests(base.TestCase):
         self.assertEqual([], uuids)
 
         uuids = ['uuid1', 'uuid2']
-        self.reaper.placement.get_allocations.side_effect = [
+        mock_allocs.side_effect = [
             {'allocations': {}},
             {'allocations': 'allocations_found'},
             {'allocations': 'allocations_found'},

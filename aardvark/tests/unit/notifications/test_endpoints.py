@@ -92,9 +92,11 @@ class StateUpdateEndpointTests(EndpointsTests):
         return fakes.make_state_update_payload(
             None, "ok", "not_ok", None, None)
 
-    @mock.patch('aardvark.api.rest.nova.novaclient')
+    @mock.patch('aardvark.api.nova')
     @mock.patch('aardvark.reaper.job_manager.JobManager')
     def _init_mocked_endpoint(self, mock_job_manager, mock_novaclient):
+        self.mocked_nova = mock_novaclient
+        self.mocked_job_manager = mock_job_manager
         return endpoints.StateUpdateEndpoint()
 
     def test_handled_on_missing_scheduling_info(self):
@@ -210,7 +212,8 @@ class StateUpdateEndpointTests(EndpointsTests):
         self.endpoint.job_manager.post_job.assert_called_once()
         self.assertEqual(0, scheduling_event.count_scheduling_instances())
 
-    def test_trigger_reaper_failure(self):
+    @mock.patch('aardvark.api.nova.server_reset_state')
+    def test_trigger_reaper_failure(self, mock_reset):
         instance = "instance_uuid"
         new_state = "pending"
         old_state = "building"
@@ -229,14 +232,12 @@ class StateUpdateEndpointTests(EndpointsTests):
         self.endpoint.job_manager.post_job.side_effect = \
             exception.ReaperException()
         self.endpoint.trigger_reaper(instance, flavor, image_uuid, event_type)
-        self.endpoint.novaclient.servers.reset_state.assert_called_once()
-        self.endpoint.novaclient.servers.reset_state.assert_called_with(
-            instance)
+        mock_reset.assert_called_once_with(instance)
         self.assertEqual(0, scheduling_event.count_scheduling_instances())
 
-    def test_reset_instances(self):
-        self.endpoint.novaclient.servers.reset_state.side_effect = \
-            n_exc.NotFound("")
+    @mock.patch('aardvark.api.nova.server_reset_state')
+    def test_reset_instances(self, mock_reset):
+        mock_reset.side_effect = n_exc.NotFound("")
         instance = ["instance_uuid"]
         try:
             self.endpoint._reset_instances(instance)
