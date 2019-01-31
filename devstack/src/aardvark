@@ -23,28 +23,6 @@ fi
 
 function install_aardvark {
     setup_develop $AARDVARK_DIR
-
-    if is_oraclelinux; then
-        install_package redis
-    elif is_fedora || is_suse; then
-        install_package redis
-        sudo systemctl enable redis
-    elif is_ubuntu; then
-        install_package build-essential
-        install_package tcl
-        curl http://download.redis.io/redis-stable.tar.gz --output ~/redis-stable.tar.gz
-        cd ~
-        tar xzvf redis-stable.tar.gz
-        cd redis-stable
-        make
-        sudo make install
-        sudo cp $AARDVARK_DEVSTACK_DIR/redis.service /etc/systemd/system/redis.service
-        sudo systemctl enable redis
-    else
-        exit_distro_not_supported "redis installation"
-    fi
-
-    start_service redis
 }
 
 
@@ -64,6 +42,15 @@ function cleanup_aardvark {
 function create_aardvark_accounts {
     create_service_user "aardvark" "admin"
     get_or_create_service "aardvark" "reaper" "Culling me softly"
+    aardvark_user=$(openstack user show "aardvark" -f value -c id)
+    # create a project for preemptible instances
+    preemtible_user=$(get_or_create_user "preemptible" \
+        "$ADMIN_PASSWORD" "default" "preemptible@example.com")
+    preemptible_project=$(get_or_create_project "preemptible" default)
+    get_or_add_user_project_role "admin" $aardvark_user $preemptible_project
+    get_or_add_user_project_role "member" $preemtible_user $preemptible_project
+    # Tag the project as preemptible
+    openstack project set --tag preemptible $preemptible_project
 }
 
 
@@ -78,20 +65,25 @@ function configure_aardvark {
 
     configure_auth
 
-    iniset $AARDVARK_CONF_FILE reaper reaper_driver chance_driver
-    iniset $AARDVARK_CONF_FILE reaper alternatives 1
-    iniset $AARDVARK_CONF_FILE reaper max_attempts 5
-    iniset $AARDVARK_CONF_FILE reaper watched_aggregates ""
-    iniset $AARDVARK_CONF_FILE reaper job_backend redis
+    iniset $AARDVARK_CONF_FILE database connection `database_connection_url aardvark`
 
-    iniset $AARDVARK_CONF_FILE aardvark enable_watermark_mode False
+    iniset $AARDVARK_CONF_FILE reaper reaper_driver chance
+    iniset $AARDVARK_CONF_FILE reaper alternatives 1
+    iniset $AARDVARK_CONF_FILE reaper max_attempts 50
+    iniset $AARDVARK_CONF_FILE reaper watched_aggregates ""
+
+    # Since the changes in Nova are not merged yet and we have to use
+    # it out of the box, we can only enable the watermark_mode since
+    # notification will never arrive.
+    iniset $AARDVARK_CONF_FILE aardvark enable_watermark_mode True
     iniset $AARDVARK_CONF_FILE aardvark watermark 95
     iniset $AARDVARK_CONF_FILE aardvark periodic_interval 60
+    iniset $AARDVARK_CONF_FILE aardvark benchmarking_mode True
 
     iniset $AARDVARK_CONF_FILE notification default_action handled
-    iniset $AARDVARK_CONF_FILE notification urls "rabbit://stackrabbit:password@127.0.0.1:5672/"
+    iniset $AARDVARK_CONF_FILE notification urls $(get_notification_url)
     iniset $AARDVARK_CONF_FILE notification topics versioned_notifications
-    
+
 }
 
 function configure_auth {
@@ -121,13 +113,16 @@ function configure_auth {
 }
 
 function start_aardvark {
+    recreate_database aardvark
+
+    # Upgrade aardvark db
+    aardvark_db --config-file $AARDVARK_CONF_FILE upgrade
+
     run_process aardvark_reaper "$AARDVARK_BIN_DIR/aardvark_reaper --config-file=$AARDVARK_CONF_FILE"
-    run_process aardvark_notification "$AARDVARK_BIN_DIR/aardvark_notification --config-file=$AARDVARK_CONF_FILE"
 }
 
 function stop_aardvark {
     stop_process aardvark_reaper
-    stop_process aardvark_notifiaction
 }
 
 
