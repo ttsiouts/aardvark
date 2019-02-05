@@ -17,7 +17,6 @@ import abc
 import six
 
 from aardvark import exception
-from aardvark.objects import resources as resources_obj
 
 from oslo_log import log as logging
 
@@ -48,17 +47,12 @@ class ReaperStrategy(object):
         # implement the strategy of the freeing
         pass
 
-    def check_spots(self, selected_hosts, requested, num_instances):
+    def check_spots(self, selected_hosts, num_instances):
         # NOTE: If we run out of hosts before the max retries, we need
         # to check if we have enough spots reserved. If not, we won't
         # kill any servers. The least number of reserved spots is the
         # number of the requested instances.
-        spots = 0
-        for host in selected_hosts:
-            resources = host_potential(
-               host, host.reserved_resources, not self.watermark_mode)
-            spots += resources_obj.Resources.min_ratio(resources, requested)
-
+        spots = sum([sh.reserved_spots for sh in selected_hosts])
         if spots < num_instances:
             message = 'Not enough preemptible resources'
             raise exception.NotEnoughResources(message)

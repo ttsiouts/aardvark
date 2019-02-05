@@ -57,10 +57,13 @@ def make_capabilities(used=None, total=None):
     return capabilities.Capabilities(used, total)
 
 
-def make_resource_provider(uuid=None, name=None, capabilities=None):
+def make_resource_provider(uuid=None, name=None, capabilities=None,
+                           reserved_spots=0):
     uuid = uuid or 'fake_rp_uuid'
     name = name or 'fake_rp_name'
     capabilities = capabilities or make_capabilities()
     rp = resource_provider.ResourceProvider(uuid, name)
     rp._capabilities = capabilities
+    rp.reserved_spots = reserved_spots
+    rp.populated = True
     return rp

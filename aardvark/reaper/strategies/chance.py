@@ -41,12 +41,17 @@ class ChanceStrategy(strategy.ReaperStrategy):
         :param resources: (Why is this here?)
         """
 
-        # This is the maximum number of spots that we'll try to free up
-        max_allocs = num_instances * CONF.reaper.alternatives
+        if self.watermark_mode:
+            # In the watermark mode we need to go over the hosts until we've
+            # gathered enough resources
+            max_attempts = len(hosts)
+        else:
+            # This is the maximum number of spots that we'll try to free up
+            max_attempts = num_instances * CONF.reaper.alternatives
         timeout = CONF.reaper.parallel_timeout
 
         @utils.timeit
-        @utils.parallelize(max_results=max_allocs, timeout=timeout)
+        @utils.parallelize(max_results=max_attempts, timeout=timeout)
         def get_valid_hosts(hosts, requested):
             valid_hosts = list()
             for host in hosts:
@@ -59,12 +64,28 @@ class ChanceStrategy(strategy.ReaperStrategy):
                     valid_hosts.append(host)
             return valid_hosts
 
+        @utils.timeit
+        @utils.parallelize(max_results=len(hosts), timeout=timeout)
+        def populate_hosts(hosts, selected_hosts):
+            valid = []
+            for host in hosts:
+                if host in selected_hosts:
+                    continue
+                host.populate(projects)
+                valid.append(host)
+            return valid
+
         selected_servers = list()
         selected_hosts = list()
+        gathered = resources_obj.Resources()
 
-        for i in range(0, max_allocs):
+        for i in range(0, max_attempts):
 
-            valid = get_valid_hosts(hosts, requested)
+            if self.watermark_mode:
+                valid = [h for h in populate_hosts(hosts, selected_hosts)]
+            else:
+                valid = get_valid_hosts(hosts, requested)
+
             try:
                 host = random.choice(valid)
             except IndexError:
@@ -82,11 +103,20 @@ class ChanceStrategy(strategy.ReaperStrategy):
 
             selected_servers += servers
 
+            # In case we are in the watermark_mode we should stop as soon as we
+            # find enough resources to avoid freeing more than what we actually
+            # need.
+            if self.watermark_mode:
+                for s in servers:
+                    gathered += s.resources
+                if gathered >= requested:
+                    break
+
         if not self.watermark_mode:
             # Watermark mode is best effort. So skip this check in this
             # mode. On the other hand if we are not in watermark mode we
             # free space only if we can find the requested space.
-            self.check_spots(selected_hosts, requested, num_instances)
+            self.check_spots(selected_hosts, num_instances)
 
         return selected_hosts, selected_servers
 
@@ -110,44 +140,50 @@ class ChanceStrategy(strategy.ReaperStrategy):
         host_resources = strategy.host_potential(
             host, resources, not self.watermark_mode)
         if requested <= host_resources:
-            host.reserve_resources(resources, requested)
+            host.used_resources += requested
+            host.reserved_spots += 1
             return selected
 
         # Shuffle the servers
         random.shuffle(preemptible)
+        gathered_resources = resources_obj.Resources()
         for marker in range(0, max_attempts):
             try:
-                # The servers have been randomly shuffled previously so we
-                # request for the preemptible server in the first position.
-                server = preemptible.pop(0)
+                server = preemptible[marker]
             except IndexError:
-                # If we run out of servers we are stopping without killing any
-                # VM. So returning an empty list
-                selected = list()
+                if not self.watermark_mode:
+                    # If we run out of servers we are stopping without killing
+                    # any VMs. So returning an empty list
+                    selected = list()
                 break
 
             selected.append(server)
-            resources += server.resources
+            gathered_resources += server.resources
 
             host_resources = strategy.host_potential(
-                host, resources, not self.watermark_mode)
-
+                host, gathered_resources, not self.watermark_mode)
             if host_resources >= requested:
                 # This is the point we want to reach. It means that requested
-                # resources will be available after the culling selected
-                # servers.
+                # resources will be available after culling selected servers.
                 break
         else:
             # If we reach here, then the max_attempts have been reached.
-            # Return an empty list.
-            selected = list()
+            # If this is not the watermark mode return an empty list since
+            # obviously we weren't able to gather the requested resources.
+            # The watermark mode is best effort so we need everything we
+            # can free up.
+            if not self.watermark_mode:
+                selected = list()
 
         # Reserving the selected resources in order to be able to perform
         # further computations if needed. Also we need the number of free
-        # spots for the alternatives functionality
+        # spots for the alternatives functionality. This can be inaccurate
+        # in the watermark mode. But in the watermark mode we know that the
+        # each resource provider will be used only once.
 
         if len(selected) > 0:
-            host.reserve_resources(resources, requested)
+            host.used_resources -= gathered_resources - requested
+            host.reserved_spots += 1
             host.preemptible_servers = [
                 pr_server for pr_server in host.preemptible_servers
                 if pr_server not in selected]

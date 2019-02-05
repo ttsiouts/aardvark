@@ -142,9 +142,9 @@ class Reaper(object):
 
         LOG.info("Current System usage = %s", system_state.usage())
         if system_state.usage() > CONF.aardvark.watermark:
-            LOG.info("Over limit, attempting to cleanup")
             resource_request = system_state.get_excessive_resources(
                 CONF.aardvark.watermark)
+            LOG.info("Over limit, attempting to cleanup: %s", resource_request)
 
             try:
                 return self.free_resources(resource_request, system,

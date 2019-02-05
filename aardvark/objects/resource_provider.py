@@ -33,6 +33,8 @@ class ResourceProvider(base.PlacementObject):
         self.name = name
         self._preemptible_servers = list()
         self._capabilities = None
+        self.reserved_spots = 0
+        self.populated = False
 
     @property
     def usages(self):
@@ -76,6 +78,10 @@ class ResourceProvider(base.PlacementObject):
     def used_resources(self):
         return self.capabilities.used
 
+    @used_resources.setter
+    def used_resources(self, new):
+        self.capabilities.used = new
+
     @property
     def reserved_resources(self):
         return self.capabilities.reserved
@@ -84,13 +90,6 @@ class ResourceProvider(base.PlacementObject):
     def free_resources(self):
         return self.capabilities.free_resources
 
-    def reserve_resources(self, resources, requested):
-        if resources > requested:
-            self.capabilities.used -= resources - requested
-        else:
-            self.capabilities.used += requested - resources
-        self.capabilities.reserved += requested
-
     def __eq__(self, other):
         return self.uuid == other.uuid
 
@@ -98,6 +97,8 @@ class ResourceProvider(base.PlacementObject):
         return hash(self.uuid)
 
     def populate(self, preemptible_projects):
+        if self.populated:
+            return
         instance_list = instance.InstanceList()
         servers = list()
         for pr_project in preemptible_projects:
@@ -108,6 +109,7 @@ class ResourceProvider(base.PlacementObject):
             }
             servers += instance_list.instances(**filters)
         self.preemptible_servers = servers
+        self.populated = True
 
 
 class ResourceProviderList(base.PlacementObject):

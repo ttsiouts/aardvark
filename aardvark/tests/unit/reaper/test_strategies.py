@@ -30,72 +30,26 @@ class ReaperStrategyTests(base.TestCase):
         super(ReaperStrategyTests, self).setUp()
 
     def test_check_spots(self):
-        used = object_fakes.make_resources(vcpu=2, memory=512, disk=10)
-        total = object_fakes.make_resources(vcpu=4, memory=1024, disk=20)
-        capabilities = object_fakes.make_capabilities(used=used, total=total)
-        hosts = [
-            object_fakes.make_resource_provider(capabilities=capabilities)
-        ]
-        requested = object_fakes.make_resources(vcpu=2, memory=512, disk=10)
         strategy = chance.ChanceStrategy(False)
-
+        hosts = [
+            object_fakes.make_resource_provider(reserved_spots=1)
+        ]
         # No exception is raised
-        strategy.check_spots(hosts, requested, 1)
+        strategy.check_spots(hosts, 1)
 
         # Asking for two slots should raise it
         self.assertRaises(exception.NotEnoughResources,
-                          strategy.check_spots, hosts, requested, 2)
+                          strategy.check_spots, hosts, 2)
 
     def test_check_spots_multiple_hosts(self):
-        used1 = object_fakes.make_resources(vcpu=2, memory=512, disk=10)
-        total1 = object_fakes.make_resources(vcpu=4, memory=1024, disk=20)
-        capabilities1 = object_fakes.make_capabilities(used=used1,
-                                                       total=total1)
-
-        used2 = object_fakes.make_resources(vcpu=2, memory=512, disk=10)
-        total2 = object_fakes.make_resources(vcpu=4, memory=1024, disk=20)
-        capabilities2 = object_fakes.make_capabilities(used=used2,
-                                                       total=total2)
-
-        hosts = [
-            object_fakes.make_resource_provider(capabilities=capabilities1),
-            object_fakes.make_resource_provider(capabilities=capabilities2)
-        ]
-
-        requested = object_fakes.make_resources(vcpu=2, memory=512, disk=10)
         strategy = chance.ChanceStrategy(False)
-
-        # No exception is raised
-        strategy.check_spots(hosts, requested, 2)
-
-        # Asking for not existing resources should raise it
-        requested = hosts[0].free_resources + hosts[1].free_resources
-        self.assertRaises(exception.NotEnoughResources,
-                          strategy.check_spots, hosts, requested, 1)
-
-    def test_check_spots_multiple_hosts_not_same_resources(self):
-        used1 = object_fakes.make_resources(vcpu=2, memory=512, disk=10)
-        total1 = object_fakes.make_resources(vcpu=4, memory=1024, disk=20)
-        capabilities1 = object_fakes.make_capabilities(used=used1,
-                                                       total=total1)
-
-        used2 = object_fakes.make_resources(vcpu=2, memory=512, disk=10)
-        total2 = object_fakes.make_resources(vcpu=4, memory=1024, disk=20)
-        capabilities2 = object_fakes.make_capabilities(used=used2,
-                                                       total=total2)
-
         hosts = [
-            object_fakes.make_resource_provider(capabilities=capabilities1),
-            object_fakes.make_resource_provider(capabilities=capabilities2)
+            object_fakes.make_resource_provider(reserved_spots=1),
+            object_fakes.make_resource_provider(reserved_spots=1)
         ]
-
-        requested = object_fakes.make_resources(vcpu=2, memory=512)
-        strategy = chance.ChanceStrategy(False)
-
         # No exception is raised
-        strategy.check_spots(hosts, requested, 2)
+        strategy.check_spots(hosts, 2)
 
-        # Asking for not existing resources should raise it
-        requested = hosts[0].free_resources + hosts[1].free_resources
+        # Asking for more spots should raise the exception
         self.assertRaises(exception.NotEnoughResources,
-                          strategy.check_spots, hosts, requested, 1)
+                          strategy.check_spots, hosts, 3)
