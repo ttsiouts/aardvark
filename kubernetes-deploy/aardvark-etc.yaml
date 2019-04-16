@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: aardvark-etc
+  namespace: aardvark-reaper
+type: Opaque
+stringData:
+  aardvark.conf: |-
+    [notification]
+    default_action=handled
+    urls=
+    topics=versioned_notifications
+
+    [compute]
+    os_region_name=cern
+    project_domain_name=Default
+    project_name=services
+    user_domain_name=Default
+    password=
+    username=
+    auth_url=https://<ip hostname>/v3
+    auth_type=password
+    client_version=2.66
+
+    [placement]
+    os_region_name=cern
+    project_domain_name=Default
+    project_name=services
+    user_domain_name=Default
+    password=
+    username=
+    auth_url=https://<ip hostname>/v3
+    auth_type=password
+
+    [identity]
+    os_region_name=cern
+    project_domain_name=Default
+    project_name=services
+    user_domain_name=Default
+    password=
+    username=
+    auth_url=https://<ip hostname>/v3
+    auth_type=password
+
+    [reaper]
+    strategy=chance
+    alternatives=1
+    max_attempts=50
+    parallel_timeout=20
+    watched_aggregates=
+
+    [aardvark]
+    enable_watermark_mode=False
+    watermark=99
+    periodic_interval=60
+    benchmarking_mode=True
+
+    [database]
+    connection=
+
+    [DEFAULT]
+    debug=True
+
+    [oslo_messaging_notifications]
+    transport_url=
+    topics=versioned_notifications
+

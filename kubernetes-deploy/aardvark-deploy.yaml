@@ -1,0 +1,72 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aardvark-reaper
+  namespace: aardvark-reaper
+  labels:
+    component: aardvark-reaper
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: aardvark-reaper
+  revisionHistoryLimit: 3
+  #  strategy:
+  #    type: RollingUpdate
+  #    rollingUpdate:
+  #      maxUnavailable: 1
+  #      maxSurge: 3
+  template:
+    metadata:
+      labels:
+        component: aardvark-reaper
+    spec:
+      securityContext:
+        runAsUser: 42424
+      initContainers:
+      containers:
+        - name: aardvark-reaper
+          imagePullPolicy: IfNotPresent
+          image: gitlab-registry.cern.ch/ttsiouts/aardvark:d67262aa3750a5ec4511d38bcea40dc3cc8bca80
+          command:
+          - aardvark_reaper
+          args:
+          - --config-file
+          - /etc/aardvark/aardvark.conf
+          securityContext:
+            allowPrivilegeEscalation: false
+            #readinessProbe:
+            #  exec:
+            #    command:
+            #    - python
+            #    - /tmp/health-probe.py
+            #    - --config-file
+            #    - /etc/aardvark/aardvark.conf
+            #    - --service-queue-name
+            #    - conductor
+            #  initialDelaySeconds: 80
+            #  periodSeconds: 90
+            #  timeoutSeconds: 70
+            #livenessProbe:
+            #  exec:
+            #    command:
+            #    - python
+            #    - /tmp/health-probe.py
+            #    - --config-file
+            #    - /etc/aardvark/aardvark.conf
+            #    - --service-queue-name
+            #    - conductor
+            #    - --liveness-probe
+            #initialDelaySeconds: 120
+            #periodSeconds: 90
+            #timeoutSeconds: 70
+          volumeMounts:
+            - name: aardvark-etc
+              mountPath: /etc/aardvark/
+              readOnly: true
+      volumes:
+        - name: aardvark-etc
+          secret:
+            secretName: aardvark-etc
+            defaultMode: 0444
