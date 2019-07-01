@@ -112,6 +112,21 @@ Specifies the host where the job board backend can be found.
 Note: This config option will be used, only if reaper.is_multithreaded is True
 """
     ),
+    cfg.IntOpt('ram_sorting_priority',
+               default=1,
+               help="""
+Note: This config option will be used, only if strict strategy is selected"""
+    ),
+    cfg.IntOpt('vcpu_sorting_priority',
+               default=2,
+               help="""
+Note: This config option will be used, only if strict strategy is selected"""
+    ),
+    cfg.IntOpt('disk_sorting_priority',
+               default=3,
+               help="""
+Note: This config option will be used, only if strict strategy is selected"""
+    ),
 ]
 
 
