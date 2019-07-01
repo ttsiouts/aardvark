@@ -34,6 +34,10 @@ notification_opts = [
     cfg.MultiStrOpt("topics",
         default=["versioned_notifications"],
         help="""Set the topics where the listeners should subscribe to"""),
+    cfg.IntOpt('max_handling_retries',
+        default=5,
+        help="""
+The max number of retries of handling notifications for a given instance."""),
 ]
 
 

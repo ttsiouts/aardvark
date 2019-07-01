@@ -14,6 +14,7 @@
 #    under the License.
 
 from aardvark.api import nova
+import aardvark.conf
 from aardvark import exception
 from aardvark.notifications import base
 from aardvark.notifications import events
@@ -28,6 +29,9 @@ from oslo_log import log as logging
 
 
 LOG = logging.getLogger(__name__)
+
+
+CONF = aardvark.conf.CONF
 
 
 class SchedulingEndpoint(base.NotificationEndpoint):
@@ -92,7 +96,7 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
             LOG.debug('Retrying to retrieve info for uuid <%s>', uuid)
             raise exception.RetryException()
 
-        if info.retries >= 5:
+        if info.retries >= CONF.notification.max_handling_retries:
             LOG.info("Retries for instance %s exceeded. Setting event to "
                      "handled and returning", uuid)
             return
