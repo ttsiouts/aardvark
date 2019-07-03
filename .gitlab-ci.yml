@@ -1,7 +1,11 @@
 stages:
   - test
   - build
+  - tag_image
   - deploy
+
+variables:
+  BUILD_ARG_1: BRANCH=${CI_BUILD_REF_NAME}
 
 pep8:
   stage: test
@@ -58,16 +62,58 @@ kojicheck:
     - cp aardvark.egg-info/PKG-INFO .
     - curl https://gitlab.cern.ch/cloud-infrastructure/cloud-dev/raw/master/gitlab/kojicheck.sh | bash
 
+#imgbuild:
+#  stage: build
+#  image: gitlab-registry.cern.ch/cloud/fedora-buildah:rawhide
+#  except:
+#    - tags
+#  script:
+#    - git clone https://git.openstack.org/openstack/loci.git /tmp/loci && cd /tmp/loci
+#    - buildah --storage-driver vfs bud --isolation chroot --build-arg FROM=centos:7 --build-arg PROJECT=$CI_PROJECT_NAME --build-arg WHEELS=loci/requirements:master-centos --build-arg PROJECT_REPO=$CI_REPOSITORY_URL --build-arg PROJECT_REF=$CI_COMMIT_SHA -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA .
+#    - buildah --storage-driver vfs push --creds gitlab-ci-token:$CI_BUILD_TOKEN $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA docker://$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+#    - buildah --storage-driver vfs rmi $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+
 imgbuild:
   stage: build
+  tags:
+    - docker-image-build
+  script: "echo" # unused but this line is required by GitLab CI
+  variables:
+    TO: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_NAME:$CI_COMMIT_SHA
+
+
+img-tag-latest:
+  stage: tag_image
   image: gitlab-registry.cern.ch/cloud/fedora-buildah:rawhide
-  except:
-    - tags
   script:
-    - git clone https://git.openstack.org/openstack/loci.git /tmp/loci && cd /tmp/loci
-    - buildah --storage-driver vfs bud --isolation chroot --build-arg FROM=centos:7 --build-arg PROJECT=$CI_PROJECT_NAME --build-arg WHEELS=loci/requirements:master-centos --build-arg PROJECT_REPO=$CI_REPOSITORY_URL --build-arg PROJECT_REF=$CI_COMMIT_SHA -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA .
-    - buildah --storage-driver vfs push --creds gitlab-ci-token:$CI_BUILD_TOKEN $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA docker://$CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
-    - buildah --storage-driver vfs rmi $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+    - >-
+        curl
+        --silent
+        --user svcbuild:${SVCBUILD_PASSWORD}
+        -H "Accept: application/json"
+        -d account=
+        -d client_id=docker
+        -d offline_token=true
+        -d service=container_registry
+        -d scope=repository:${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}:*
+        -G https://gitlab.cern.ch/jwt/auth | jq .token -r > token.txt
+    - TOKEN=$(cat token.txt)
+    - >-
+        curl
+        --silent
+        -X GET
+        -H "Accept: application/vnd.docker.distribution.manifest.v2+json"
+        -H "Authorization: Bearer ${TOKEN}"
+        -G https://gitlab-registry.cern.ch/v2/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}/manifests/$CI_COMMIT_SHA > manifest.json
+    - >-
+        curl
+        -v
+        -X PUT
+        -H "Authorization: Bearer ${TOKEN}"
+        -H "Accept: application/vnd.docker.distribution.manifest.v2+json"
+        -H "Content-Type: application/vnd.docker.distribution.manifest.v2+json"
+        -d @manifest.json
+        https://gitlab-registry.cern.ch/v2/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}/${CI_COMMIT_REF_NAME}/manifests/latest
 
 kojiscratch:
   stage: deploy
