@@ -15,11 +15,14 @@
 
 
 from aardvark.reaper.notifier import base
+from aardvark.reaper.notifier import email_notifier
 from aardvark.reaper.notifier import log_notifier
 
 
 BaseNotifier = base.BaseNotifier
+EmailNotifier = email_notifier.EmailNotifier
 LogNotifier = log_notifier.LogNotifier
 
 __all__ = (BaseNotifier,
+           EmailNotifier,
            LogNotifier)

@@ -29,6 +29,83 @@ This specifies a list of notifiers to be used uppon deleting an instance. The
 possible options would be the following:
 
 * log:   Uses python logging to log the action
+* email: Emails the owner of the instance (To use this option more config
+                                           options are needed)
+"""
+    ),
+    cfg.StrOpt('sender',
+               help="""
+Specifies the sender of the email to the owner(s) of the instance. This option
+is required for email notifier only.
+"""
+    ),
+    cfg.StrOpt('smtp_server',
+               help="""
+Specifies the body of the email to the owner(s) of the instance. This option
+is required for email notifier only.
+"""
+    ),
+    cfg.StrOpt('smtp_password',
+               default=None,
+               secret=True,
+               help="""
+Specifies the password for connecting to the smtp server. This option
+is taken into account only when email notifier is used.
+"""
+    ),
+    cfg.ListOpt('cc',
+                default=[],
+                help="""
+Specifies the addresses to be cc'd in the email to the owner(s) of the
+instance. This option is taken into account only when email notifier is used.
+"""
+    ),
+    cfg.ListOpt('bcc',
+                default=[],
+                help="""
+Specifies the addresses to be bcc'd in the email to the owner(s) of the
+instance. This option is taken into account only when email notifier is used.
+"""
+    ),
+    cfg.StrOpt('subject',
+               default="""
+Preemptible instance <instance_name> was terminated
+""",
+               help="""
+Specifies the subject of the email to the owner(s) of the instance. The user
+can add the following tags and aardvark will format the body with the
+information of the instance that is being terminated:
+* <user_id>: will be replaced by the owner of the instance
+* <instance_name>: will be replaced by the name of the instance
+* <instance_uuid>: will be replaced by the uuid of the instance
+This option is taken into account only when email notifier is used.
+"""
+    ),
+    cfg.StrOpt('body',
+               default="""
+Dear <user_id>,
+
+Your preemptible instance <instance_name> (id: <instance_uuid>) was terminated
+because the resources were needed for higher priority workloads.
+
+Aardvark
+""",
+               help="""
+Specifies the body of the email to the owner(s) of the instance. The user can
+add the following tags and aardvark will format the body with the information
+of the instance that is being terminated:
+* <user_id>: will be replaced by the owner of the instance
+* <instance_name>: will be replaced by the name of the instance
+* <instance_uuid>: will be replaced by the uuid of the instance
+This option is taken into account only when email notifier is used.
+"""
+    ),
+    cfg.StrOpt('default_email_domain',
+               help="""
+If the address found from the instance does not match the email regex, then
+aardvark will fall back to this email domain. It should be in this format:
+"@example.com". This option is taken into account only when email notifier is
+used.
 """
     ),
 ]
