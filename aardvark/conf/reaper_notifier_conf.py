@@ -29,6 +29,7 @@ This specifies a list of notifiers to be used uppon deleting an instance. The
 possible options would be the following:
 
 * log:   Uses python logging to log the action
+* oslo:  Sends a standard OpenStack notification
 * email: Emails the owner of the instance (To use this option more config
                                            options are needed)
 """
@@ -106,6 +107,13 @@ If the address found from the instance does not match the email regex, then
 aardvark will fall back to this email domain. It should be in this format:
 "@example.com". This option is taken into account only when email notifier is
 used.
+"""
+    ),
+    cfg.ListOpt('oslo_topics',
+                default=[],
+                help="""
+Specifies the topics where the reaper notifications will be sent.
+This option is taken into account only when oslo notifier is used.
 """
     ),
 ]

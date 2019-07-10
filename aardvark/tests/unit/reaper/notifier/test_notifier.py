@@ -17,6 +17,8 @@ import base64
 import email
 import mock
 
+from oslo_messaging import exceptions as oslo_exc
+
 import aardvark.conf
 from aardvark.reaper import notifier
 from aardvark.reaper import reaper_action as ra
@@ -265,3 +267,193 @@ class EmailNotifierTests(ReaperNotifierTests):
                      " %s because: %s")
         mock_error.assert_called_once_with(error_msg, "owner@cern.ch",
                                            instance.uuid, exception)
+
+
+class OsloNotifierTests(ReaperNotifierTests):
+
+    notifier_name = "OsloNotifier"
+
+    def setUp(self):
+        super(OsloNotifierTests, self).setUp()
+        self.notifier = notifier.OsloNotifier()
+        self.mock_context = mock.Mock()
+        self.notifier.context = self.mock_context
+        self.topics = ['aardvark_notifications']
+        CONF.reaper_notifier.oslo_topics = self.topics
+
+    def test_notify_about_instance(self):
+        instance = mock.Mock(owner='owner', uuid='fake_uuid',
+                             user_id='fake_user')
+        type(instance).name = mock.PropertyMock(return_value='fake_name')
+        expected_payload = {
+            'user_id': 'fake_user',
+            'uuid': 'fake_uuid',
+            'name': 'fake_name'
+        }
+        expected_event = "instance_terminated"
+        mock_notifier = mock.Mock()
+        self.notifier.oslo_notifier = mock_notifier
+        self.notifier.notify_about_instance(instance)
+        mock_notifier.info.assert_called_once_with(self.mock_context,
+                                                   expected_event,
+                                                   expected_payload)
+
+    @mock.patch('aardvark.reaper.notifier.oslo_notifier.LOG.error')
+    def test_notify_about_instance_failed_to_send(self, mock_error):
+        instance = mock.Mock(owner='owner', uuid='fake_uuid',
+                             user_id='fake_user')
+        type(instance).name = mock.PropertyMock(return_value='fake_name')
+        mock_notifier = mock.Mock()
+        side_effect = oslo_exc.MessagingException('foo')
+        mock_notifier.info.side_effect = side_effect
+        self.notifier.oslo_notifier = mock_notifier
+        self.notifier.notify_about_instance(instance)
+        mock_error.assert_called_once_with(
+            "Oslo notifier failed because of: %s", side_effect)
+
+    def test_notify_about_action(self):
+        mock_notifier = mock.Mock()
+        self.notifier.oslo_notifier = mock_notifier
+        action = fakes.make_reaper_action()
+        expected_event = "reaper_action.ongoing"
+        expected_payload = {
+            'state': action.state.value.lower(),
+            'requested_instances': action.requested_instances,
+            'event': action.event.value.lower(),
+            'uuid': action.uuid
+        }
+        self.notifier.notify_about_action(action)
+        mock_notifier.error.assert_not_called()
+        mock_notifier.info.assert_called_once_with(self.mock_context,
+                                                   expected_event,
+                                                   expected_payload)
+
+    def test_notify_about_action_success(self):
+        mock_notifier = mock.Mock()
+        self.notifier.oslo_notifier = mock_notifier
+        action = fakes.make_reaper_action(state=ra.ActionState.SUCCESS)
+        expected_event = "reaper_action.success"
+        expected_payload = {
+            'state': action.state.value.lower(),
+            'requested_instances': action.requested_instances,
+            'victims': action.victims,
+            'event': action.event.value.lower(),
+            'uuid': action.uuid
+        }
+        self.notifier.notify_about_action(action)
+        mock_notifier.error.assert_not_called()
+        mock_notifier.info.assert_called_once_with(self.mock_context,
+                                                   expected_event,
+                                                   expected_payload)
+
+    def test_notify_about_action_failed(self):
+        mock_notifier = mock.Mock()
+        self.notifier.oslo_notifier = mock_notifier
+        action = fakes.make_reaper_action(state=ra.ActionState.FAILED,
+                                          fault_reason="action failed")
+        expected_event = "reaper_action.failed"
+        expected_payload = {
+            'state': action.state.value.lower(),
+            'requested_instances': action.requested_instances,
+            'event': action.event.value.lower(),
+            'uuid': action.uuid,
+            'fault_reason': action.fault_reason
+        }
+        self.notifier.notify_about_action(action)
+        mock_notifier.info.assert_not_called()
+        mock_notifier.error.assert_called_once_with(self.mock_context,
+                                                    expected_event,
+                                                    expected_payload)
+
+    def test_notify_about_action_canceled(self):
+        mock_notifier = mock.Mock()
+        self.notifier.oslo_notifier = mock_notifier
+        action = fakes.make_reaper_action(state=ra.ActionState.CANCELED,
+                                          fault_reason="action canceled")
+        expected_event = "reaper_action.canceled"
+        expected_payload = {
+            'state': action.state.value.lower(),
+            'requested_instances': action.requested_instances,
+            'event': action.event.value.lower(),
+            'uuid': action.uuid,
+            'fault_reason': action.fault_reason
+        }
+        self.notifier.notify_about_action(action)
+        mock_notifier.info.assert_not_called()
+        mock_notifier.error.assert_called_once_with(self.mock_context,
+                                                    expected_event,
+                                                    expected_payload)
+
+    def test_notify_about_action_state_calculation(self):
+        mock_notifier = mock.Mock()
+        self.notifier.oslo_notifier = mock_notifier
+        action = fakes.make_reaper_action(
+            event=ra.ActionEvent.STATE_CALCULATION)
+        expected_event = "reaper_action.ongoing"
+        expected_payload = {
+            'state': action.state.value.lower(),
+            'event': action.event.value.lower(),
+            'uuid': action.uuid
+        }
+        self.notifier.notify_about_action(action)
+        mock_notifier.error.assert_not_called()
+        mock_notifier.info.assert_called_once_with(self.mock_context,
+                                                   expected_event,
+                                                   expected_payload)
+
+    def test_notify_about_action_state_calculation_success(self):
+        mock_notifier = mock.Mock()
+        self.notifier.oslo_notifier = mock_notifier
+        action = fakes.make_reaper_action(
+            event=ra.ActionEvent.STATE_CALCULATION,
+            state=ra.ActionState.SUCCESS)
+        expected_event = "reaper_action.success"
+        expected_payload = {
+            'state': action.state.value.lower(),
+            'event': action.event.value.lower(),
+            'victims': action.victims,
+            'uuid': action.uuid
+        }
+        self.notifier.notify_about_action(action)
+        mock_notifier.error.assert_not_called()
+        mock_notifier.info.assert_called_once_with(self.mock_context,
+                                                   expected_event,
+                                                   expected_payload)
+
+    def test_notify_about_action_state_calculation_failed(self):
+        mock_notifier = mock.Mock()
+        self.notifier.oslo_notifier = mock_notifier
+        action = fakes.make_reaper_action(
+            event=ra.ActionEvent.STATE_CALCULATION,
+            state=ra.ActionState.FAILED, fault_reason="action failed")
+        expected_event = "reaper_action.failed"
+        expected_payload = {
+            'state': action.state.value.lower(),
+            'event': action.event.value.lower(),
+            'fault_reason': action.fault_reason,
+            'uuid': action.uuid
+        }
+        self.notifier.notify_about_action(action)
+        mock_notifier.info.assert_not_called()
+        mock_notifier.error.assert_called_once_with(self.mock_context,
+                                                    expected_event,
+                                                    expected_payload)
+
+    def test_notify_about_action_state_calculation_canceled(self):
+        mock_notifier = mock.Mock()
+        self.notifier.oslo_notifier = mock_notifier
+        action = fakes.make_reaper_action(
+            event=ra.ActionEvent.STATE_CALCULATION,
+            state=ra.ActionState.CANCELED, fault_reason="action canceled")
+        expected_event = "reaper_action.canceled"
+        expected_payload = {
+            'state': action.state.value.lower(),
+            'event': action.event.value.lower(),
+            'fault_reason': action.fault_reason,
+            'uuid': action.uuid
+        }
+        self.notifier.notify_about_action(action)
+        mock_notifier.info.assert_not_called()
+        mock_notifier.error.assert_called_once_with(self.mock_context,
+                                                    expected_event,
+                                                    expected_payload)
