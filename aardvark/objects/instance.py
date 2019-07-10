@@ -20,15 +20,21 @@ from aardvark.objects import resources
 
 class Instance(base.BaseObject):
 
-    def __init__(self, uuid, name, flavor):
-        super(Instance, self).__init__(uuid, name, flavor)
+    def __init__(self, uuid, name, flavor, user_id, metadata):
+        super(Instance, self).__init__(uuid, name, flavor, user_id, metadata)
         self.uuid = uuid
         self.name = name
         self.flavor = flavor
+        self.user_id = user_id
+        self.metadata = metadata
 
     @property
     def resources(self):
         return resources.Resources.obj_from_flavor(self.flavor)
+
+    @property
+    def owner(self):
+        return self.metadata.get('landb-responsible', self.user_id)
 
 
 class InstanceList(base.BaseObject):

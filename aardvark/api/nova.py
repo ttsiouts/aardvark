@@ -54,7 +54,8 @@ def server_list(**filters):
     if 'project_id' in filters:
         filters.update({'all_tenants': True})
     from aardvark.objects import instance
-    return [instance.Instance(server.id, server.name, server.flavor)
+    return [instance.Instance(server.id, server.name, server.flavor,
+                              server.user_id, server.metadata)
             for server in client.servers.list(search_opts=filters)]
 
 
