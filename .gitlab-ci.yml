@@ -6,6 +6,7 @@ stages:
 
 variables:
   BUILD_ARG_1: BRANCH=${CI_BUILD_REF_NAME}
+  NO_CACHE: DISABLE_CACHE
 
 pep8:
   stage: test

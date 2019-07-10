@@ -14,26 +14,12 @@
 #    under the License.
 
 
-from aardvark.conf import aardvark_conf
-from aardvark.conf import database_conf
-from aardvark.conf import keystone_conf
-from aardvark.conf import notification_conf
-from aardvark.conf import nova_conf
-from aardvark.conf import placement_conf
-from aardvark.conf import reaper_conf
-from aardvark.conf import reaper_notifier_conf
-
-from oslo_config import cfg
+from aardvark.reaper.notifier import base
+from aardvark.reaper.notifier import log_notifier
 
 
-CONF = cfg.CONF
+BaseNotifier = base.BaseNotifier
+LogNotifier = log_notifier.LogNotifier
 
-
-aardvark_conf.register_opts(CONF)
-database_conf.register_opts(CONF)
-notification_conf.register_opts(CONF)
-nova_conf.register_opts(CONF)
-keystone_conf.register_opts(CONF)
-placement_conf.register_opts(CONF)
-reaper_conf.register_opts(CONF)
-reaper_notifier_conf.register_opts(CONF)
+__all__ = (BaseNotifier,
+           LogNotifier)

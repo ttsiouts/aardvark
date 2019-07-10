@@ -13,27 +13,27 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
-from aardvark.conf import aardvark_conf
-from aardvark.conf import database_conf
-from aardvark.conf import keystone_conf
-from aardvark.conf import notification_conf
-from aardvark.conf import nova_conf
-from aardvark.conf import placement_conf
-from aardvark.conf import reaper_conf
-from aardvark.conf import reaper_notifier_conf
-
 from oslo_config import cfg
 
 
-CONF = cfg.CONF
+reaper_notifier_group = cfg.OptGroup(
+    'reaper_notifier',
+    title='Aardvark Notifiers Options',
+    help="Configuration options for Aardvark notifiers")
+
+reaper_notifier_opts = [
+    cfg.ListOpt('enabled_notifiers',
+                default=['log'],
+                help="""
+This specifies a list of notifiers to be used uppon deleting an instance. The
+possible options would be the following:
+
+* log:   Uses python logging to log the action
+"""
+    ),
+]
 
 
-aardvark_conf.register_opts(CONF)
-database_conf.register_opts(CONF)
-notification_conf.register_opts(CONF)
-nova_conf.register_opts(CONF)
-keystone_conf.register_opts(CONF)
-placement_conf.register_opts(CONF)
-reaper_conf.register_opts(CONF)
-reaper_notifier_conf.register_opts(CONF)
+def register_opts(conf):
+    conf.register_group(reaper_notifier_group)
+    conf.register_opts(reaper_notifier_opts, group=reaper_notifier_group)

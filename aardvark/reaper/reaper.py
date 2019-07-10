@@ -57,22 +57,20 @@ def reaper_action(fn):
             action.event = ra.ActionEvent.STATE_CALCULATION
         action.state = ra.ActionState.ONGOING
         action.create()
-        LOG.info("Reaper action %s started", action.uuid)
+        self.notify_about_action(action)
         try:
             victims = fn(self, request)
             action.victims = victims
             action.state = ra.ActionState.SUCCESS
-            LOG.info("Reaper action %s completed successfully", action.uuid)
         except exception.PreemptibleRequest as pr:
             action.state = ra.ActionState.CANCELED
             action.fault_reason = pr.message
-            LOG.info("Reaper action %s canceled: %s", action.uuid, pr.message)
         except exception.AardvarkException as e:
             action.state = ra.ActionState.FAILED
             action.fault_reason = e.message
-            LOG.info("Reaper action %s failed: %s", action.uuid, e.message)
         finally:
             action.update()
+        self.notify_about_action(action)
     return wrapper
 
 
@@ -88,6 +86,7 @@ class Reaper(object):
         self.aggregates = aggregates if aggregates else []
         # TODO(ttsiouts): Load configured notification system in order to
         # notify the owner of the server that will be terminated
+        self.notifiers = self._load_enabled_notifiers()
 
     def _load_configured_strategy(self, watermark_mode=False):
         """Loads the configured strategy"""
@@ -96,6 +95,17 @@ class Reaper(object):
             CONF.reaper.strategy,
             invoke_on_load=True,
             invoke_args=tuple([watermark_mode])).driver
+
+    def _load_enabled_notifiers(self):
+        """Loads the enabled notifiers"""
+        notifiers = list()
+        for notifier in CONF.reaper_notifier.enabled_notifiers:
+            notification_driver = driver.DriverManager(
+                "aardvark.reaper.notifier", notifier,
+                invoke_on_load=True).driver
+            LOG.info("Loaded %s notifier successfully", notifier)
+            notifiers.append(notification_driver)
+        return notifiers
 
     def handle_reaper_request(self, request):
         try:
@@ -170,8 +180,8 @@ class Reaper(object):
         for server in selected_servers:
             try:
                 LOG.info("Trying to delete server: %s", server.name)
-                self.notify_about_instance(server)
                 nova.server_delete(server.uuid)
+                self.notify_about_instance(server)
             except n_exc.NotFound:
                 # One of the selected servers was not found so, we will retry
                 LOG.info("Server %s not found. Retrying.", server.name)
@@ -185,9 +195,22 @@ class Reaper(object):
         return uuids
 
     def notify_about_instance(self, instance):
-        # Notify with the configured notification system before deleting.
-        # Leaving this here as a hook.
-        pass
+        for notifier in self.notifiers:
+            try:
+                notifier.notify_about_instance(instance)
+            except Exception as e:
+                LOG.error("Error while notifying for instance %s: %s",
+                          instance.uuid, e)
+                continue
+
+    def notify_about_action(self, action):
+        for notifier in self.notifiers:
+            try:
+                notifier.notify_about_action(action)
+            except Exception as e:
+                LOG.error("Error while notifying for action %s: %s",
+                          action.uuid, e)
+                continue
 
     def job_handler(self):
         self.flag = True

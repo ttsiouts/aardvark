@@ -36,7 +36,7 @@ class ReaperAction(base.PersistentObject):
 
     dbapi = dbapi.get_instance()
     fields = ['state', 'requested_instances', 'victims', 'fault_reason',
-              'event', 'uuid', 'created_at', 'updated_at', 'fault_reason']
+              'event', 'uuid', 'created_at', 'updated_at']
 
     def __init__(self):
         super(ReaperAction, self).__init__()
