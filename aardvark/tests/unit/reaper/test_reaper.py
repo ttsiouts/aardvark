@@ -20,6 +20,7 @@ import aardvark.conf
 from aardvark import exception
 from aardvark.reaper import reaper
 from aardvark.tests import base
+from aardvark.tests.unit.objects import fakes as obj_fakes
 from aardvark.tests.unit.reaper import fakes
 
 
@@ -119,7 +120,7 @@ class ReaperTests(base.TestCase):
         for server in servers:
             server.name = server.uuid
         mocked_return = mock.Mock(return_value=(hosts, servers))
-        not_found = {'allocations': {}}
+        not_found = obj_fakes.make_resources()
         mock_allocs.return_value = not_found
         mock_strategy = mock.Mock(get_preemptible_servers=mocked_return)
         with mock.patch.object(self.reaper, '_load_configured_strategy') as m:
@@ -182,23 +183,25 @@ class ReaperTests(base.TestCase):
 
     @mock.patch('aardvark.api.placement.get_consumer_allocations')
     def test_wait_until_allocations_are_deleted(self, mock_allocs):
-        uuids = ['uuid1', 'uuid2']
+        server1 = mock.Mock(uuid='uuid1', rp_uuid='rp1_uuid')
+        server2 = mock.Mock(uuid='uuid2', rp_uuid='rp2_uuid')
+        servers = [server1, server2]
         mock_allocs.side_effect = [
-            {'allocations': {}},
-            {'allocations': 'allocations_found'},
-            {'allocations': {}}
+            obj_fakes.make_resources(),
+            obj_fakes.make_resources(vcpu=1),
+            obj_fakes.make_resources(),
         ]
-        self.reaper.wait_until_allocations_are_deleted(uuids)
-        self.assertEqual([], uuids)
+        self.reaper.wait_until_allocations_are_deleted(servers)
+        self.assertEqual([], servers)
 
-        uuids = ['uuid1', 'uuid2']
+        servers = [server1, server2]
         mock_allocs.side_effect = [
-            {'allocations': {}},
-            {'allocations': 'allocations_found'},
-            {'allocations': 'allocations_found'},
-            {'allocations': 'allocations_found'}
+            obj_fakes.make_resources(),
+            obj_fakes.make_resources(vcpu=1),
+            obj_fakes.make_resources(vcpu=1),
+            obj_fakes.make_resources(vcpu=1),
         ]
         with mock.patch('time.time') as mocked_time:
             mocked_time.side_effect = [1, 1, 1, 1, 100]
-            self.reaper.wait_until_allocations_are_deleted(uuids)
-            self.assertEqual(['uuid2'], uuids)
+            self.reaper.wait_until_allocations_are_deleted(servers)
+            self.assertEqual([server2], servers)

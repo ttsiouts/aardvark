@@ -41,9 +41,17 @@ def get_resource_provider_inventories(resource_provider):
     return resources.Resources.obj_from_inventories(result)
 
 
-def get_consumer_allocations(consumer):
+def get_consumer_allocations(consumer, rp_uuid):
     client = _get_placement_client()
-    return client.get_allocations(consumer)
+    allocations = client.get_allocations(consumer)['allocations']
+    try:
+        alloc_res = allocations[rp_uuid]['resources']
+    except (KeyError):
+        # This means that the consumer does not have
+        # allocations to this resource provider so
+        # just return empty resources.
+        alloc_res = {}
+    return resources.Resources(alloc_res)
 
 
 def get_resource_classes():

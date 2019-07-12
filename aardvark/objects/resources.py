@@ -47,7 +47,7 @@ class Resources(object):
         return Resources(resources)
 
     @staticmethod
-    def obj_from_flavor(flavor):
+    def obj_from_flavor(flavor, is_bfv=False):
         vcpus = flavor['vcpus']
         disk = flavor['ephemeral'] + flavor['disk'] + flavor['swap']
         ram = flavor['ram']
@@ -56,7 +56,7 @@ class Resources(object):
         resources = {}
         if vcpus > 0:
             resources.update({'VCPU': vcpus})
-        if disk > 0:
+        if disk > 0 and not is_bfv:
             resources.update({'DISK_GB': disk})
         if ram > 0:
             resources.update({'MEMORY_MB': ram})

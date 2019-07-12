@@ -23,6 +23,7 @@ from aardvark.api import nova
 from aardvark.api import placement
 import aardvark.conf
 from aardvark import exception
+from aardvark.objects import resources as resources_obj
 from aardvark.objects import system as system_obj
 from aardvark.reaper import reaper_action as ra
 from aardvark.reaper import reaper_request as rr_obj
@@ -188,11 +189,10 @@ class Reaper(object):
                 raise exception.RetryException()
 
         # We have to wait until the allocations are removed
-        uuids = [s.uuid for s in selected_servers]
-        if len(uuids) > 0:
-            self.wait_until_allocations_are_deleted(uuids[:])
+        if len(selected_servers) > 0:
+            self.wait_until_allocations_are_deleted(selected_servers[:])
 
-        return uuids
+        return [server.uuid for server in selected_servers]
 
     def notify_about_instance(self, instance):
         for notifier in self.notifiers:
@@ -295,7 +295,7 @@ class Reaper(object):
                 raise exception.UnwatchedAggregate()
 
     @utils.timeit
-    def wait_until_allocations_are_deleted(self, uuids, timeout=20):
+    def wait_until_allocations_are_deleted(self, servers, timeout=20):
         """Wait until the allocation is deleted
 
         Tries to get the allocations of a given instance until it's not found
@@ -305,18 +305,20 @@ class Reaper(object):
         # Have to live with it for now... If we don't wait here, the claiming
         # of the resources will most probably fail since placement will not be
         # updated right away....
+        target = resources_obj.Resources()
         start = time.time()
         now = start
         while now - start <= timeout:
             not_found = False
-            for uuid in uuids:
-                resp = placement.get_consumer_allocations(uuid)
-                if resp['allocations'] == {}:
+            for server in servers:
+                resources = placement.get_consumer_allocations(server.uuid,
+                                                               server.rp_uuid)
+                if resources == target:
                     not_found = True
                     break
             if not_found:
-                LOG.info('Allocations for %s not found', uuid)
-                uuids.remove(uuid)
-            if len(uuids) == 0:
+                LOG.info('Allocations for %s not found', server.uuid)
+                servers.remove(server)
+            if len(servers) == 0:
                 break
             now = time.time()

@@ -107,7 +107,7 @@ class ResourceProvider(base.PlacementObject):
                 'project_id': pr_project,
                 'vm_state': 'ACTIVE'
             }
-            servers += instance_list.instances(**filters)
+            servers += instance_list.instances(self.uuid, **filters)
         self.preemptible_servers = servers
         self.populated = True
 

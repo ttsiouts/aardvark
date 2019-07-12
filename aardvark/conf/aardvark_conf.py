@@ -70,6 +70,14 @@ Enable benchmarking mode
 Print out the time it takes to execute critical sections of the code.
 """
     ),
+    cfg.BoolOpt('resources_from_flavor',
+                default=True,
+                help="""
+Instead of going to placement for every instance resources, we just extract
+them from the flavor used. If set to False for each instance we will query
+Placement API.
+"""
+    ),
 ]
 
 
