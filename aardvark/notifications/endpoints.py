@@ -78,8 +78,8 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
                 self.trigger_reaper(
                     event.instance_uuid, event.flavor, event.image, event_type)
             except exception.RetriesExceeded:
-                LOG.debug("Couldn't find the scheduling info for instance"
-                          "%s. Returning.")
+                LOG.debug("Couldn't find the scheduling info for instance "
+                          "%s. Returning.", event.instance_uuid)
                 # The notifcation is going to be set as handled in order to
                 # avoid handling it over and over again.
                 return self.handled()
