@@ -52,6 +52,9 @@ class StrictStrategy(strategy.ReaperStrategy):
         # This is the maximum number of spots that we'll try to free up
         max_allocs = num_instances * CONF.reaper.alternatives
 
+        for host in hosts:
+            host.populate(projects)
+
         for i in range(0, max_allocs):
 
             # Find all the matching flavor combinations and order them
@@ -60,6 +63,7 @@ class StrictStrategy(strategy.ReaperStrategy):
             if not combo:
                 # If we run out of combos before the max retries break and
                 # check if we have enough spots reserved.
+                LOG.debug('No combo returned.')
                 break
 
             host = combo.provider
@@ -74,6 +78,8 @@ class StrictStrategy(strategy.ReaperStrategy):
             if host not in selected_hosts:
                 selected_hosts.append(host)
             selected += combo.instances
+            LOG.debug('List of instances: %s from host: %s selected',
+                      combo.instances, combo.provider)
 
         if not self.watermark_mode:
             # Watermark mode is best effort. So skip this check in this
@@ -95,7 +101,11 @@ class StrictStrategy(strategy.ReaperStrategy):
         for host in hosts:
             # NOTE(ttsiouts): If free space is enough for the new server
             # then we should not delete any of the existing servers
+            LOG.debug('Requested: %s, Free: %s',
+                      requested, host.free_resources)
             if requested <= host.free_resources:
+                LOG.debug('Free resources enough. Requested: %s, Free: %s',
+                          requested, host.free_resources)
                 leftovers = host.free_resources - requested
                 combinations.append(Combination(provider=host,
                                                 leftovers=leftovers,
@@ -104,17 +114,21 @@ class StrictStrategy(strategy.ReaperStrategy):
                 continue
 
             preemptible = host.preemptible_servers
-            end = len(preemptible) if len(preemptible) > 2 else 2
+            LOG.debug('Prememptibles: %s', host.preemptible_servers)
+            end = len(preemptible) + 1
             for num in range(1, end):
-                combos = itertools.combinations(preemptible, num)
-                for combo in combos:
+                num_combinations = itertools.combinations(preemptible, num)
+                for combo in num_combinations:
                     resources = sum_resources(combo) + host.free_resources
                     if requested <= resources:
-                        instances = [x.uuid for x in combo]
+                        instances = [x for x in combo]
                         leftovers = resources - requested
                         combinations.append(Combination(provider=host,
                                                         leftovers=leftovers,
                                                         instances=instances))
+                    else:
+                        LOG.debug("Requested: %s resources: %s. combo %s, not "
+                                  "selected", requested, resources, combo)
 
         if not combinations:
             return None

@@ -37,10 +37,9 @@ class StrictStrategyTests(base.TestCase):
         rp_capabilities = object_fakes.make_capabilities(
            used=used, total=total)
 
-        servers = [
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=10), uuid='server1'),
-        ]
+        server1 = mock.Mock(resources=object_fakes.make_resources(
+            vcpu=1, memory=256, disk=10), uuid='server1')
+        servers = [server1]
 
         host = object_fakes.make_resource_provider(
             uuid='1', name='rp1', capabilities=rp_capabilities)
@@ -48,7 +47,7 @@ class StrictStrategyTests(base.TestCase):
         requested = object_fakes.make_resources(vcpu=1, memory=256, disk=5)
         result = self.strategy.find_matching_server_combinations(
             [host], requested)
-        expected_instances = ['server1']
+        expected_instances = [server1]
         exepected_leftovers = object_fakes.make_resources(disk=5)
         self.assertEqual(expected_instances, result.instances)
         self.assertEqual(exepected_leftovers, result.leftovers)
@@ -60,14 +59,13 @@ class StrictStrategyTests(base.TestCase):
         rp_capabilities = object_fakes.make_capabilities(
            used=used, total=total)
 
-        servers = [
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=10), uuid='server1'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=5), uuid='server2'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=2, memory=512, disk=10), uuid='server3')
-        ]
+        server1 = mock.Mock(resources=object_fakes.make_resources(
+            vcpu=1, memory=256, disk=10), uuid='server1')
+        server2 = mock.Mock(resources=object_fakes.make_resources(
+            vcpu=1, memory=256, disk=5), uuid='server2')
+        server3 = mock.Mock(resources=object_fakes.make_resources(
+            vcpu=2, memory=512, disk=10), uuid='server3')
+        servers = [server1, server2, server3]
 
         host = object_fakes.make_resource_provider(
             uuid='1', name='rp1', capabilities=rp_capabilities)
@@ -75,7 +73,7 @@ class StrictStrategyTests(base.TestCase):
         requested = object_fakes.make_resources(vcpu=1, memory=256, disk=5)
         result = self.strategy.find_matching_server_combinations(
             [host], requested)
-        expected_instances = ['server2']
+        expected_instances = [server2]
         exepected_leftovers = object_fakes.make_resources()
         self.assertEqual(expected_instances, result.instances)
         self.assertEqual(exepected_leftovers, result.leftovers)
@@ -115,7 +113,7 @@ class StrictStrategyTests(base.TestCase):
         requested = object_fakes.make_resources(vcpu=2, memory=512, disk=10)
         result = self.strategy.find_matching_server_combinations(
             [host1, host2], requested)
-        expected_instances = ['server1']
+        expected_instances = servers1
         exepected_leftovers = object_fakes.make_resources()
         self.assertEqual(expected_instances, result.instances)
         self.assertEqual(exepected_leftovers, result.leftovers)
@@ -127,14 +125,13 @@ class StrictStrategyTests(base.TestCase):
         rp_capabilities = object_fakes.make_capabilities(
            used=used, total=total)
 
-        servers = [
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=10), uuid='server1'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=5), uuid='server2'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=2, memory=512, disk=10), uuid='server3')
-        ]
+        server1 = mock.Mock(resources=object_fakes.make_resources(
+            vcpu=1, memory=256, disk=10), uuid='server1')
+        server2 = mock.Mock(resources=object_fakes.make_resources(
+            vcpu=1, memory=256, disk=5), uuid='server2')
+        server3 = mock.Mock(resources=object_fakes.make_resources(
+            vcpu=2, memory=512, disk=10), uuid='server3')
+        servers = [server1, server2, server3]
 
         host = object_fakes.make_resource_provider(
             uuid='1', name='rp1', capabilities=rp_capabilities)
@@ -154,10 +151,9 @@ class StrictStrategyTests(base.TestCase):
         rp1_capabilities = object_fakes.make_capabilities(
            used=used1, total=total1)
 
-        servers1 = [
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=10), uuid='server1'),
-        ]
+        server1 = mock.Mock(resources=object_fakes.make_resources(
+            vcpu=1, memory=256, disk=10), uuid='server1')
+        servers1 = [server1]
 
         host1 = object_fakes.make_resource_provider(
             uuid='1', name='rp1', capabilities=rp1_capabilities)
@@ -168,12 +164,11 @@ class StrictStrategyTests(base.TestCase):
         rp2_capabilities = object_fakes.make_capabilities(
            used=used2, total=total2)
 
-        servers2 = [
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=5), uuid='server2'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=2, memory=512, disk=10), uuid='server3')
-        ]
+        server2 = mock.Mock(resources=object_fakes.make_resources(
+            vcpu=1, memory=256, disk=5), uuid='server2')
+        server3 = mock.Mock(resources=object_fakes.make_resources(
+            vcpu=2, memory=512, disk=10), uuid='server3')
+        servers2 = [server2, server3]
 
         host2 = object_fakes.make_resource_provider(
             uuid='2', name='rp2', capabilities=rp2_capabilities)
@@ -194,14 +189,13 @@ class StrictStrategyTests(base.TestCase):
         rp_capabilities = object_fakes.make_capabilities(
            used=used, total=total)
 
-        servers = [
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=10), uuid='server1'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=5), uuid='server2'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=2, memory=512, disk=10), uuid='server3')
-        ]
+        server1 = mock.Mock(resources=object_fakes.make_resources(
+            vcpu=1, memory=256, disk=10), uuid='server1')
+        server2 = mock.Mock(resources=object_fakes.make_resources(
+            vcpu=1, memory=256, disk=5), uuid='server2')
+        server3 = mock.Mock(resources=object_fakes.make_resources(
+            vcpu=2, memory=512, disk=10), uuid='server3')
+        servers = [server1, server2, server3]
 
         host = object_fakes.make_resource_provider(
             uuid='1', name='rp1', capabilities=rp_capabilities)
@@ -217,10 +211,9 @@ class StrictStrategyTests(base.TestCase):
         rp1_capabilities = object_fakes.make_capabilities(
            used=used1, total=total1)
 
-        servers1 = [
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=10), uuid='server1'),
-        ]
+        server1 = mock.Mock(resources=object_fakes.make_resources(
+            vcpu=1, memory=256, disk=10), uuid='server1')
+        servers1 = [server1]
 
         host1 = object_fakes.make_resource_provider(
             uuid='1', name='rp1', capabilities=rp1_capabilities)
@@ -231,12 +224,11 @@ class StrictStrategyTests(base.TestCase):
         rp2_capabilities = object_fakes.make_capabilities(
            used=used2, total=total2)
 
-        servers2 = [
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=5), uuid='server2'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=2, memory=512, disk=10), uuid='server3')
-        ]
+        server2 = mock.Mock(resources=object_fakes.make_resources(
+            vcpu=1, memory=256, disk=5), uuid='server2')
+        server3 = mock.Mock(resources=object_fakes.make_resources(
+            vcpu=2, memory=512, disk=10), uuid='server3')
+        servers2 = [server2, server3]
 
         host2 = object_fakes.make_resource_provider(
             uuid='2', name='rp2', capabilities=rp2_capabilities)
@@ -253,12 +245,11 @@ class StrictStrategyTests(base.TestCase):
         rp_capabilities = object_fakes.make_capabilities(
            used=used, total=total)
 
-        servers = [
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=2, memory=512, disk=5), uuid='server1'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=10), uuid='server2'),
-        ]
+        server1 = mock.Mock(resources=object_fakes.make_resources(
+           vcpu=2, memory=512, disk=5), uuid='server1')
+        server2 = mock.Mock(resources=object_fakes.make_resources(
+           vcpu=1, memory=256, disk=10), uuid='server2')
+        servers = [server1, server2]
 
         host = object_fakes.make_resource_provider(
             uuid='1', name='rp1', capabilities=rp_capabilities)
@@ -269,7 +260,7 @@ class StrictStrategyTests(base.TestCase):
         CONF.reaper.disk_sorting_priority = 3
         result = self.strategy.find_matching_server_combinations(
             [host], requested)
-        expected_instances = ['server2']
+        expected_instances = [server2]
         exepected_leftovers = object_fakes.make_resources(disk=5)
         self.assertEqual(expected_instances, result.instances)
         self.assertEqual(exepected_leftovers, result.leftovers)

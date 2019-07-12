@@ -53,6 +53,7 @@ class ReaperStrategy(object):
         # kill any servers. The least number of reserved spots is the
         # number of the requested instances.
         spots = sum([sh.reserved_spots for sh in selected_hosts])
+        LOG.info("Requested %s spots and found %s", num_instances, spots)
         if spots < num_instances:
             message = 'Not enough preemptible resources'
             raise exception.NotEnoughResources(message)

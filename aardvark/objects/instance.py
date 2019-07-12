@@ -22,6 +22,7 @@ from aardvark.objects import resources
 
 CONF = aardvark.conf.CONF
 
+
 class Instance(base.BaseObject):
 
     def __init__(self, uuid, name, flavor, user_id, metadata, image, rp_uuid):
@@ -61,6 +62,7 @@ class Instance(base.BaseObject):
         # It's safe to assume that if the image is None then
         # the server is most probably booting from volume
         return self.image is None
+
 
 class InstanceList(base.BaseObject):
 
