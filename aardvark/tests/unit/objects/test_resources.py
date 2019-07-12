@@ -32,6 +32,14 @@ class ResourcesTests(base.TestCase):
         expected = fakes.make_resources(vcpu=1, memory=30000, disk=60)
         self.assertEqual(expected, res)
 
+    def test_resources_from_flavor_payload_bfv(self):
+        payload = notification_fakes.make_flavor_payload(
+            "uuid", vcpus=1, ephemeral=20, root_gb=30, swap=10, ram=30000)
+        res = resources.Resources.obj_from_payload(payload['nova_object.data'],
+                                                   is_bfv=True)
+        expected = fakes.make_resources(vcpu=1, memory=30000)
+        self.assertEqual(expected, res)
+
     def test_resources_from_flavor(self):
         flavor = fakes.make_flavor(
             "uuid", vcpus=1, ephemeral=20, root_gb=30, swap=10, ram=30000)

@@ -15,6 +15,7 @@
 
 from oslo_log import log
 
+from aardvark.api import cinder
 from aardvark.db import api as dbapi
 from aardvark import exception
 from aardvark.notifications import base
@@ -140,7 +141,7 @@ class StateUpdateEvent(base.NotificationEvent):
 
     dbapi = dbapi.get_instance()
     fields = ['instance_uuid', 'state_update', 'image', 'flavor', 'handled',
-              'uuid']
+              'uuid', 'block_devices']
 
     def __init__(self):
         super(StateUpdateEvent, self).__init__()
@@ -151,9 +152,23 @@ class StateUpdateEvent(base.NotificationEvent):
         event = StateUpdateEvent()
         event.instance_uuid = payload['nova_object.data']['uuid']
         event.state_update = payload['nova_object.data']['state_update']
-        event.image = payload['nova_object.data']['image_uuid']
         flavor_data = payload['nova_object.data']['flavor']['nova_object.data']
         event.flavor = flavor_data
+        try:
+            event.block_devices = payload['nova_object.data']['block_devices']
+            if event.block_devices is None:
+                event.block_devices = []
+        except (KeyError):
+            LOG.warning("Notifications from Nova do not contaion"
+                        " block device mapping. No way to know if"
+                        " an instance is booting from volume")
+            event.block_devices = []
+        if event.is_bfv:
+            # If the instance boots from volume we need to
+            # fetch the image information from the volume.
+            event.image = cinder.get_image_from_volume(event.root_volume)
+        else:
+            event.image = payload['nova_object.data']['image_uuid']
         return event
 
     @staticmethod
@@ -189,6 +204,20 @@ class StateUpdateEvent(base.NotificationEvent):
         return (self.new_state == 'pending'
             and self.old_task_state == 'rebuilding'
             and self.new_task_state is None)
+
+    @property
+    def is_bfv(self):
+        return any([bdm['nova_object.data']['boot_index'] == 0
+                    for bdm in self.block_devices])
+
+    @property
+    def root_volume(self):
+        root_volumes = [bdm['nova_object.data']['volume_id']
+                        for bdm in self.block_devices
+                        if bdm['nova_object.data']['boot_index'] == 0]
+        if not root_volumes:
+            return None
+        return root_volumes[0]
 
     @staticmethod
     def get_by_uuid(uuid):

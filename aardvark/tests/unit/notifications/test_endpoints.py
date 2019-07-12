@@ -147,7 +147,7 @@ class StateUpdateEndpointTests(EndpointsTests):
         with mock.patch.object(self.endpoint, 'trigger_reaper') as trigger:
             self.endpoint.info(None, None, None, payload, None)
             trigger.assert_called_once_with(
-                instance, flavor, image_uuid, e_type)
+                instance, flavor, image_uuid, e_type, False)
 
     def test_payload_rebuild_to_pending(self):
         instance = "instance_uuid"
@@ -168,7 +168,7 @@ class StateUpdateEndpointTests(EndpointsTests):
         with mock.patch.object(self.endpoint, 'trigger_reaper') as trigger:
             self.endpoint.info(None, None, None, payload, None)
             trigger.assert_called_once_with(
-                instance, flavor, image_uuid, e_type)
+                instance, flavor, image_uuid, e_type, False)
 
     def test_trigger_reaper(self):
         instance = "instance_uuid"

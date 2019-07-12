@@ -75,8 +75,8 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
             event.create()
             event.set_handled()
             try:
-                self.trigger_reaper(
-                    event.instance_uuid, event.flavor, event.image, event_type)
+                self.trigger_reaper(event.instance_uuid, event.flavor,
+                                    event.image, event_type, event.is_bfv)
             except exception.RetriesExceeded:
                 LOG.error("Couldn't find the scheduling info for instance "
                           "%s. Returning.", event.instance_uuid)
@@ -92,7 +92,7 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
         return self._default_action()
 
     @utils.retries(exception.RetriesExceeded)
-    def trigger_reaper(self, uuid, flavor, image, event_type):
+    def trigger_reaper(self, uuid, flavor, image, event_type, is_bfv=False):
         try:
             # No default value in order to retry
             info = events.SchedulingEvent.get_by_instance_uuid(uuid)
@@ -110,8 +110,9 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
         LOG.info("Notification received for uuid: %s event type: %s",
                  uuid, event_type)
         # Enrich the request with info from the scheduling_info
-        request = resources_obj.Resources.obj_from_payload(flavor)
-
+        request = resources_obj.Resources.obj_from_payload(flavor,
+                                                           is_bfv=is_bfv)
+        LOG.info("Requesting for these resources: %s", request)
         uuids = info.instance_uuids
 
         if info.multiple_instances and event_type != "rebuild":
