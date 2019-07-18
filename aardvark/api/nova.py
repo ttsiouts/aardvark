@@ -51,8 +51,6 @@ def server_reset_state(server):
 def server_list(**filters):
     """Returns a list of servers matching the given filters"""
     client = _get_nova_client()
-    if 'project_id' in filters:
-        filters.update({'all_tenants': True})
     return client.servers.list(search_opts=filters)
 
 

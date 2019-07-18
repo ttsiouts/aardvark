@@ -13,21 +13,33 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from datetime import datetime
+
 from aardvark.api import nova
 from aardvark.api import placement
 import aardvark.conf
 from aardvark.objects import base
 from aardvark.objects import resources
 
+from oslo_log import log
+
+
+LOG = log.getLogger(__name__)
+
 
 CONF = aardvark.conf.CONF
 
 
+def _get_now():
+    return datetime.now()
+
+
 class Instance(base.BaseObject):
 
-    def __init__(self, uuid, name, flavor, user_id, metadata, image, rp_uuid):
+    def __init__(self, uuid, name, flavor, user_id, metadata, image, created,
+                 rp_uuid):
         super(Instance, self).__init__(uuid, name, flavor, user_id, metadata,
-                                       image, rp_uuid)
+                                       image, created, rp_uuid)
         self.uuid = uuid
         self.name = name
         self.flavor = flavor
@@ -36,6 +48,7 @@ class Instance(base.BaseObject):
         self.image = None if image == '' else image
         self.rp_uuid = rp_uuid
         self._resources = None
+        self.created = created
 
     @property
     def resources(self):
@@ -72,9 +85,48 @@ class InstanceList(base.BaseObject):
     def instances(self, rp_uuid, **filters):
         if 'project_id' in filters:
             filters.update({'all_tenants': True})
+        if 'sort_dir' not in filters:
+            filters['sort_dir'] = 'asc'
+        if 'sort_key' not in filters:
+            filters['sort_key'] = 'created_at'
         return [Instance(server.id, server.name, server.flavor, server.user_id,
-                         server.metadata, server.image, rp_uuid)
+                         server.metadata, server.image, server.created,
+                         rp_uuid)
                 for server in nova.server_list(**filters)]
+
+    def sorted_instances(self, rp_uuid, **filters):
+        return self._sort_instances(self.instances(rp_uuid, **filters))
 
     def delete_instance(self, instance):
         nova.server_delete(instance)
+
+    def _sort_instances(self, instances):
+        # NOTE(ttsiouts): We aim to have instances sorted by creation time
+        # from Nova API, from longest living to sortest living. So here
+        # we want to put the instances that are alive for less than the
+        # configured time in front of the list.
+        if CONF.aardvark.quick_kill_seconds == 0:
+            return instances
+        index = len(instances)
+        for instance in reversed(instances):
+            lived = self._seconds_since(instance.created)
+            if lived < CONF.aardvark.quick_kill_seconds:
+                index = instances.index(instance)
+            else:
+                break
+        if index == 0:
+            instances = [x for x in reversed(instances)]
+        elif index == len(instances) - 1:
+            instances = [instances[index]] + instances[:index]
+        elif index < len(instances):
+            quick_kill = [x for x in reversed(instances[index - 1:])]
+            instances = quick_kill + instances[:index - 1]
+        LOG.debug('order now is: %s', ', '.join([x.name for x in instances]))
+        return instances
+
+    def _seconds_since(self, before):
+        # Returns the time delta in seconds.
+        # Assumes that the before is in ISO 8601 format (coming from Nova API).
+        now = _get_now()
+        before = datetime.strptime(before, '%Y-%m-%dT%H:%M:%SZ')
+        return (now - before).total_seconds()

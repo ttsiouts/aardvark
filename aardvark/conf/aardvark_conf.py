@@ -78,6 +78,13 @@ them from the flavor used. If set to False for each instance we will query
 Placement API.
 """
     ),
+    cfg.IntOpt('quick_kill_seconds',
+               default=0,
+               help="""
+Instances that live less than the specified quick_kill_time are prefered for
+killing. NOTE: this value is expected to be in seconds.
+"""
+    ),
 ]
 
 

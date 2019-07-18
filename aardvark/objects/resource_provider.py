@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
+
 from aardvark.api import placement
 from aardvark.objects import base
 from aardvark.objects import capabilities
@@ -110,6 +112,24 @@ class ResourceProvider(base.PlacementObject):
             servers += instance_list.instances(self.uuid, **filters)
         self.preemptible_servers = servers
         self.populated = True
+
+    def populate_sorted(self, preemptible_projects):
+        if self.populated:
+            return
+        instance_list = instance.InstanceList()
+        servers = list()
+        for pr_project in preemptible_projects:
+            filters = {
+                'host': self.name,
+                'project_id': pr_project,
+                'vm_state': 'ACTIVE'
+            }
+            servers += instance_list.sorted_instances(self.uuid, **filters)
+        self.preemptible_servers = servers
+        self.populated = True
+        self.flavors_dict = collections.defaultdict(list)
+        for server in self.preemptible_servers:
+            self.flavors_dict[server.flavor['original_name']].append(server)
 
 
 class ResourceProviderList(base.PlacementObject):

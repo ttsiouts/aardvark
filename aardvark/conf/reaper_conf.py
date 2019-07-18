@@ -37,6 +37,13 @@ Possible choices:
           combination of preemptible servers that leave the least
           possible resources unused.
 
+* strict_time: The purpose of the preemptibles existence is to eliminate the
+               idling resources. This strategy gets all the possible offers
+               from the relevant hosts and tries to find the best matching
+               for the requested resources. The best matching offer is the
+               combination of preemptible servers that leave the least
+               possible resources unused.
+
 * chance: A valid host is selected randomly and in a number of
           preconfigured retries, the strategy tries to find the instances
           that have to be culled in order to have the requested
