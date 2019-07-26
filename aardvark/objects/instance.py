@@ -13,13 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from datetime import datetime
-
 from aardvark.api import nova
 from aardvark.api import placement
 import aardvark.conf
 from aardvark.objects import base
 from aardvark.objects import resources
+from aardvark import utils
 
 from oslo_log import log
 
@@ -28,10 +27,6 @@ LOG = log.getLogger(__name__)
 
 
 CONF = aardvark.conf.CONF
-
-
-def _get_now():
-    return datetime.now()
 
 
 class Instance(base.BaseObject):
@@ -82,7 +77,7 @@ class InstanceList(base.BaseObject):
     def __init__(self):
         super(InstanceList, self).__init__()
 
-    def instances(self, rp_uuid, **filters):
+    def instances(self, rp_uuid=None, **filters):
         if 'project_id' in filters:
             filters.update({'all_tenants': True})
         if 'sort_dir' not in filters:
@@ -109,7 +104,7 @@ class InstanceList(base.BaseObject):
             return instances
         index = len(instances)
         for instance in reversed(instances):
-            lived = self._seconds_since(instance.created)
+            lived = utils.seconds_since(instance.created)
             if lived < CONF.aardvark.quick_kill_seconds:
                 index = instances.index(instance)
             else:
@@ -123,10 +118,3 @@ class InstanceList(base.BaseObject):
             instances = quick_kill + instances[:index - 1]
         LOG.debug('order now is: %s', ', '.join([x.name for x in instances]))
         return instances
-
-    def _seconds_since(self, before):
-        # Returns the time delta in seconds.
-        # Assumes that the before is in ISO 8601 format (coming from Nova API).
-        now = _get_now()
-        before = datetime.strptime(before, '%Y-%m-%dT%H:%M:%SZ')
-        return (now - before).total_seconds()

@@ -61,7 +61,7 @@ class ReaperService(service.Service):
         # since it is taken care of by the Service.stop()
         super(ReaperService, self).stop(graceful=graceful)
 
-    @utils.is_multithreaded
+    @utils.enabled(CONF.reaper.is_multithreaded)
     def _start_workers(self):
         LOG.info('Starting Reaper workers')
         for instance in self.reaper_instances:
@@ -74,7 +74,7 @@ class ReaperService(service.Service):
             self.worker_inspector.periodic_tasks,
             context=context.get_admin_context())
 
-    @utils.watermark_enabled
+    @utils.enabled(CONF.aardvark.enable_watermark_mode)
     def _start_state_calculation(self):
         self.state_calculator = SystemStateCalculator()
         LOG.info('Starting Periodic System State Calculation')
@@ -84,24 +84,24 @@ class ReaperService(service.Service):
             periodic_interval_max=CONF.aardvark.periodic_interval,
             context=admin_context)
 
-    @utils.notifications_enabled
+    @utils.enabled(CONF.aardvark.enable_notification_handling)
     def _start_notification_handling(self):
         LOG.info('Starting Notification listener')
         self.notification_manager.start()
 
-    @utils.is_multithreaded
+    @utils.enabled(CONF.reaper.is_multithreaded)
     def _stop_workers(self):
         LOG.info('Stoping Reaper workers')
         for instance in self.reaper_instances:
             instance.stop_handling()
             instance.worker.join()
 
-    @utils.notifications_enabled
+    @utils.enabled(CONF.aardvark.enable_notification_handling)
     def _stop_notification_handling(self):
         LOG.info('Stoping Notification listener')
         self.notification_manager.stop()
 
-    @utils.is_multithreaded
+    @utils.enabled(CONF.reaper.is_multithreaded)
     def _setup_workers(self, watched_aggregates):
         if len(watched_aggregates) == 0:
             LOG.debug('One worker for all infrastructure will be started')
@@ -115,7 +115,7 @@ class ReaperService(service.Service):
                 instance.job_handler)
             self.reaper_instances.append(instance)
 
-    @utils.notifications_enabled
+    @utils.enabled(CONF.aardvark.enable_notification_handling)
     def _setup_notification_manager(self):
         self.notification_manager = manager.ListenerManager()
 

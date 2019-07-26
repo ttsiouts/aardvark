@@ -14,6 +14,7 @@
 #    under the License.
 
 from collections import Iterable
+from datetime import datetime
 import eventlet.queue
 import eventlet.timeout
 from functools import wraps
@@ -30,31 +31,16 @@ LOG = log.getLogger(__name__)
 CONF = aardvark.conf.CONF
 
 
-def is_multithreaded(fn):
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-        if CONF.reaper.is_multithreaded:
-            return fn(*args, **kwargs)
-        return None
-    return wrapper
-
-
-def notifications_enabled(fn):
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-        if CONF.aardvark.enable_notification_handling:
-            return fn(*args, **kwargs)
-        return None
-    return wrapper
-
-
-def watermark_enabled(fn):
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-        if CONF.aardvark.enable_watermark_mode:
-            return fn(*args, **kwargs)
-        return None
-    return wrapper
+def enabled(config):
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            if config is True:
+                return fn(*args, **kwargs)
+            else:
+                LOG.debug("%s disabled by config", fn.__name__)
+        return wrapper
+    return decorator
 
 
 def retries(side_effect=None):
@@ -190,3 +176,15 @@ def split_workload(num_workers, workload):
         if (i + 1) * ratio >= length:
             break
     return jobs
+
+
+def _get_now():
+    return datetime.now()
+
+
+def seconds_since(since):
+    # Returns the time delta in seconds.
+    # Assumes that the since is in ISO 8601 format (coming from Nova API).
+    now = _get_now()
+    since = datetime.strptime(since, '%Y-%m-%dT%H:%M:%SZ')
+    return (now - since).total_seconds()

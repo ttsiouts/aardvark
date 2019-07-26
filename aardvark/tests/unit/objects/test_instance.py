@@ -35,7 +35,7 @@ class InstanceListTests(base.TestCase):
         type(instance).name = name
         return instance
 
-    @mock.patch('aardvark.objects.instance._get_now')
+    @mock.patch('aardvark.utils._get_now')
     def test_sorted_instances(self, mock_now):
         CONF.aardvark.quick_kill_seconds = 120
         server1 = self._create_mock_instance('2019-07-16T13:13:00Z', 'server1')
@@ -50,7 +50,7 @@ class InstanceListTests(base.TestCase):
         result = self.instance_list._sort_instances(instances)
         self.assertEqual(expected, result)
 
-    @mock.patch('aardvark.objects.instance._get_now')
+    @mock.patch('aardvark.utils._get_now')
     def test_sorted_instances_all_reversed(self, mock_now):
         CONF.aardvark.quick_kill_seconds = 120
         server1 = self._create_mock_instance('2019-07-18T14:13:01Z', 'server1')
@@ -65,7 +65,7 @@ class InstanceListTests(base.TestCase):
         result = self.instance_list._sort_instances(instances)
         self.assertEqual(expected, result)
 
-    @mock.patch('aardvark.objects.instance._get_now')
+    @mock.patch('aardvark.utils._get_now')
     def test_sorted_instances_dif(self, mock_now):
         CONF.aardvark.quick_kill_seconds = 120
         server1 = self._create_mock_instance('2019-07-18T14:12:01Z', 'server1')
@@ -80,7 +80,7 @@ class InstanceListTests(base.TestCase):
         result = self.instance_list._sort_instances(instances)
         self.assertEqual(expected, result)
 
-    @mock.patch('aardvark.objects.instance._get_now')
+    @mock.patch('aardvark.utils._get_now')
     def test_sorted_instances_diff(self, mock_now):
         CONF.aardvark.quick_kill_seconds = 120
         server1 = self._create_mock_instance('2019-07-18T14:12:01Z', 'server1')
@@ -97,7 +97,7 @@ class InstanceListTests(base.TestCase):
         result = [x.name for x in result]
         self.assertEqual(expected, result)
 
-    @mock.patch('aardvark.objects.instance._get_now')
+    @mock.patch('aardvark.utils._get_now')
     def test_sorted_instances_no_sort(self, mock_now):
         CONF.aardvark.quick_kill_seconds = 120
         server1 = self._create_mock_instance('2019-07-18T14:12:01Z', 'server1')
@@ -111,7 +111,7 @@ class InstanceListTests(base.TestCase):
         result = self.instance_list._sort_instances(instances)
         self.assertEqual(instances, result)
 
-    @mock.patch('aardvark.objects.instance._get_now')
+    @mock.patch('aardvark.utils._get_now')
     def test_sorted_instances_no_quick_kill(self, mock_now):
         CONF.aardvark.quick_kill_seconds = 0
         server1 = self._create_mock_instance('2019-07-18T14:12:01Z', 'server1')
@@ -125,7 +125,7 @@ class InstanceListTests(base.TestCase):
         result = self.instance_list._sort_instances(instances)
         self.assertEqual(instances, result)
 
-    @mock.patch('aardvark.objects.instance._get_now')
+    @mock.patch('aardvark.utils._get_now')
     def test_sorted_instances_only_one(self, mock_now):
         CONF.aardvark.quick_kill_seconds = 60
         server1 = self._create_mock_instance('2019-07-18T14:14:01Z', 'server1')
@@ -135,7 +135,7 @@ class InstanceListTests(base.TestCase):
         result = self.instance_list._sort_instances(instances)
         self.assertEqual(instances, result)
 
-    @mock.patch('aardvark.objects.instance._get_now')
+    @mock.patch('aardvark.utils._get_now')
     def test_sorted_instances_only_two(self, mock_now):
         CONF.aardvark.quick_kill_seconds = 60
         server1 = self._create_mock_instance('2019-07-18T14:13:01Z', 'server1')
