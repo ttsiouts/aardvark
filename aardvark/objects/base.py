@@ -30,6 +30,7 @@ class PersistentObject(object):
     """Base class for all objects stored in aardvark DB"""
 
     fields = []
+    enum_fields = {}
     db_map = {}
 
     def __init__(self):
@@ -37,6 +38,8 @@ class PersistentObject(object):
 
     def __setattr__(self, attr, value):
         self.changes[attr] = value
+        if attr in self.enum_fields:
+            self.changes[attr] = value.value
         super(PersistentObject, self).__setattr__(attr, value)
 
     def reset_changes(self):
@@ -51,6 +54,8 @@ class PersistentObject(object):
                     value = getattr(db_object, field)
                 else:
                     value = getattr(db_object, cls.db_map[field])
+                if field in cls.enum_fields:
+                    value = cls.enum_fields[field](value)
             except TypeError:
                 value = None
             setattr(obj, field, value)

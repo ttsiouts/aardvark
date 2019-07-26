@@ -36,6 +36,7 @@ class ActionEvent(enum.Enum):
 class ReaperAction(base.PersistentObject):
 
     dbapi = dbapi.get_instance()
+    enum_fields = {'state': ActionState, 'event': ActionEvent}
     fields = ['state', 'requested_instances', 'victims', 'fault_reason',
               'event', 'uuid', 'created_at', 'updated_at']
 

@@ -27,10 +27,10 @@ class ReaperActionTests(base.DbTestCase):
         utils.create_test_reaper_action()
 
     def test_create_reaper_action_state_calculation(self):
-        utils.create_test_reaper_action(event=ra.ActionEvent.STATE_CALCULATION)
+        utils.create_test_reaper_action(event="STATE_CALCULATION")
 
     def test_create_reaper_action_rebuild(self):
-        utils.create_test_reaper_action(event=ra.ActionEvent.REBUILD_REQUEST)
+        utils.create_test_reaper_action(event="REBUILD_REQUEST")
 
     def test_create_reaper_action_duplicate(self):
         utils.create_test_reaper_action()
@@ -38,15 +38,15 @@ class ReaperActionTests(base.DbTestCase):
                           utils.create_test_reaper_action)
 
     def test_reaper_action_update(self):
-        action = utils.create_test_reaper_action(state=ra.ActionState.ONGOING)
-        values = {'state': ra.ActionState.SUCCESS}
+        action = utils.create_test_reaper_action(state="ONGOING")
+        values = {'state': "SUCCESS"}
         dbapi = db_api.get_instance()
         dbapi.update_reaper_action(action.uuid, values)
         new = ra.ReaperAction.get_by_uuid(action.uuid)
         self.assertEqual(ra.ActionState.SUCCESS, new.state)
 
     def test_reaper_action_update_not_found(self):
-        values = {'state': ra.ActionState.SUCCESS}
+        values = {'state': "SUCCESS"}
         dbapi = db_api.get_instance()
         self.assertRaises(exception.ReaperActionNotFound,
                           dbapi.update_reaper_action, 'not-existing', values)

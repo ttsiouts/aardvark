@@ -14,7 +14,6 @@
 #    under the License.
 
 from aardvark.db import api as db_api
-from aardvark.reaper import reaper_action as ra
 
 
 def get_test_reaper_action(**kw):
@@ -23,11 +22,11 @@ def get_test_reaper_action(**kw):
     return {
         'id': kw.get('id', 12),
         'uuid': kw.get('uuid', '483203a3-dbee-4a9c-9d65-9820512f4df8'),
-        'state': kw.get('state', ra.ActionState.SUCCESS),
+        'state': kw.get('state', "SUCCESS"),
         'requested_instances': kw.get('requested_instances', requested),
         'fault_reason': kw.get('fault_reason', None),
         'victims': kw.get('victims', victims),
-        'event': kw.get('event', ra.ActionEvent.BUILD_REQUEST)
+        'event': kw.get('event', "BUILD_REQUEST")
     }
 
 

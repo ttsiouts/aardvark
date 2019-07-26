@@ -20,7 +20,6 @@ from oslo_db.sqlalchemy.types import String
 import six.moves.urllib.parse as urlparse
 from sqlalchemy import Boolean
 from sqlalchemy import Column
-from sqlalchemy import Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Integer
 from sqlalchemy import schema
@@ -29,7 +28,6 @@ from sqlalchemy.types import TypeDecorator, TEXT
 from sqlalchemy import orm
 
 import aardvark.conf
-from aardvark.reaper import reaper_action as ra
 
 
 CONF = aardvark.conf.CONF
@@ -170,8 +168,8 @@ class ReaperAction(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     uuid = Column(String(36))
-    state = Column(Enum(ra.ActionState))
+    state = Column(String(36))
     requested_instances = Column(JSONEncodedList, nullable=True)
     fault_reason = Column(Text, nullable=True)
     victims = Column(JSONEncodedList, nullable=True)
-    event = Column(Enum(ra.ActionEvent))
+    event = Column(String(36))
