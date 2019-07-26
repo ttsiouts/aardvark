@@ -53,6 +53,7 @@ class ReaperService(service.Service):
         self._start_workers()
         self._start_state_calculation()
         self._start_notification_handling()
+        self._start_periodic_killer()
 
     def stop(self, graceful=True):
         self._stop_workers()
@@ -82,6 +83,16 @@ class ReaperService(service.Service):
         self.tg.add_dynamic_timer(
             self.state_calculator.periodic_tasks,
             periodic_interval_max=CONF.aardvark.periodic_interval,
+            context=admin_context)
+
+    @utils.enabled(CONF.aardvark.enable_periodic_killer)
+    def _start_periodic_killer(self):
+        self.old_instance_killer = OldPreemptibleKiller()
+        LOG.info('Starting Periodic Killer')
+        admin_context = context.get_admin_context()
+        self.tg.add_dynamic_timer(
+            self.old_instance_killer.periodic_tasks,
+            periodic_interval_max=CONF.aardvark.killer_interval,
             context=admin_context)
 
     @utils.enabled(CONF.aardvark.enable_notification_handling)
@@ -176,3 +187,20 @@ class ReaperWorkerHealthCheck(periodic_task.PeriodicTasks):
                 new_instance.job_handler)
             self.reaper_instances.append(new_instance)
             new_instance.worker.start()
+
+
+class OldPreemptibleKiller(periodic_task.PeriodicTasks):
+
+    def __init__(self):
+        super(OldPreemptibleKiller, self).__init__(CONF)
+        self.job_manager = job_manager.JobManager()
+
+    def periodic_tasks(self, context, raise_on_error=False):
+        return self.run_periodic_tasks(context, raise_on_error=raise_on_error)
+
+    @periodic_task.periodic_task(spacing=CONF.aardvark.killer_interval,
+                                 run_immediately=False)
+    def kill_old_instances(self, context, startup=True):
+        LOG.debug('Checking for old instances')
+        request = rr_obj.OldInstanceKillerRequest()
+        self.job_manager.post_job(request)

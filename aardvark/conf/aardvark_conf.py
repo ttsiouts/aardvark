@@ -85,6 +85,27 @@ Instances that live less than the specified quick_kill_time are prefered for
 killing. NOTE: this value is expected to be in seconds.
 """
     ),
+    cfg.BoolOpt('enable_periodic_killer',
+                default=True,
+                help="""
+Enable a periodic task that checks for instances that exceed the maximum life
+span.
+"""
+    ),
+    cfg.IntOpt('killer_interval',
+               default=43200,
+               help="""
+This specifies the interval for checking for old instances.
+NOTE: this value is expected to be in seconds.
+"""
+    ),
+    cfg.IntOpt('max_life_span',
+               default=86400,
+               help="""
+Instances that live more than the specified max_life_span will be deleted when
+the periodic check runs. NOTE: this value is expected to be in seconds.
+"""
+    ),
 ]
 
 

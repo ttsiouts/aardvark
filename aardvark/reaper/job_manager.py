@@ -54,7 +54,8 @@ class JobManager(object):
     def post_job(self, request):
         # Make sure that the forwarded requests are for watched
         # aggregates.
-        self._is_aggregate_watched(request.aggregates)
+        if hasattr(request, 'aggregates'):
+            self._is_aggregate_watched(request.aggregates)
         if CONF.reaper.is_multithreaded:
             self.multithreaded_handling(request)
         else:

@@ -33,6 +33,8 @@ class LogNotifier(base.BaseNotifier):
     def notify_about_action(self, action):
         if action.event == ra.ActionEvent.STATE_CALCULATION:
             self._notify_about_state_calculation(action)
+        elif action.event == ra.ActionEvent.KILLER_REQUEST:
+            self._notify_about_killer_request(action)
         else:
             self._notify_about_reaper_request(action)
 
@@ -62,4 +64,16 @@ class LogNotifier(base.BaseNotifier):
                      action.uuid, action.state.value.lower(), action.victims)
         else:
             LOG.info("State calculation %s, state: %s", action.uuid,
+                     action.state.value.lower())
+
+    def _notify_about_killer_request(self, action):
+        if action.state in (ra.ActionState.FAILED, ra.ActionState.CANCELED):
+            LOG.error("Killer request %s, state: %s, fault reason: %s",
+                      action.uuid, action.state.value.lower(),
+                      action.fault_reason)
+        elif action.state == ra.ActionState.SUCCESS:
+            LOG.info("Killer request %s, state: %s, victims: %s",
+                     action.uuid, action.state.value.lower(), action.victims)
+        else:
+            LOG.info("Killer request %s, state: %s", action.uuid,
                      action.state.value.lower())

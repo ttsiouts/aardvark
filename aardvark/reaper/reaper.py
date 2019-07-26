@@ -23,6 +23,7 @@ from aardvark.api import nova
 from aardvark.api import placement
 import aardvark.conf
 from aardvark import exception
+from aardvark.objects import instance as instance_obj
 from aardvark.objects import resources as resources_obj
 from aardvark.objects import system as system_obj
 from aardvark.reaper import reaper_action as ra
@@ -53,9 +54,7 @@ def reaper_action(fn):
         action = ra.ReaperAction()
         if isinstance(request, rr_obj.ReaperRequest):
             action.requested_instances = request.uuids
-            action.event = request.event_type
-        else:
-            action.event = ra.ActionEvent.STATE_CALCULATION
+        action.event = request.event_type
         action.state = ra.ActionState.ONGOING
         action.create()
         self.notify_about_action(action)
@@ -165,6 +164,31 @@ class Reaper(object):
                           "maintain system usage below %s%. Aborting.",
                           CONF.aardvark.watermark)
 
+    def handle_old_instance_request(self, request):
+        system = system_obj.System()
+        instance_list = instance_obj.InstanceList()
+        for project in system.preemptible_projects:
+            filters = {
+                'project_id': project.id_,
+                'sort_dir': 'asc',
+                'sort_key': 'created_at'
+            }
+            instances = instance_list.instances(**filters)
+            old_servers = list()
+            for instance in instances:
+                lifespan = utils.seconds_since(instance.created)
+                if lifespan >= CONF.aardvark.max_life_span:
+                    old_servers.append(instance)
+                else:
+                    # NOTE(ttsiouts): We are fetching the instances
+                    # already sotred from the Nova API so when we find the
+                    # first instance that is not old enough just break.
+                    break
+        for server in old_servers:
+            self._delete_instance(server,
+                                  side_effect=exception.RetryException)
+        return [server.uuid for server in old_servers]
+
     @utils.retries(exception.RetriesExceeded)
     def free_resources(self, request, system, slots=1, watermark_mode=False):
 
@@ -179,14 +203,8 @@ class Reaper(object):
                                                     slots, projects)
 
         for server in selected_servers:
-            try:
-                LOG.info("Trying to delete server: %s", server.name)
-                nova.server_delete(server.uuid)
-                self.notify_about_instance(server)
-            except n_exc.NotFound:
-                # One of the selected servers was not found so, we will retry
-                LOG.info("Server %s not found. Retrying.", server.name)
-                raise exception.RetryException()
+            self._delete_instance(server,
+                                  side_effect=exception.RetryException)
 
         # We have to wait until the allocations are removed
         if len(selected_servers) > 0:
@@ -260,6 +278,9 @@ class Reaper(object):
         elif isinstance(request, rr_obj.StateCalculationRequest):
             return self.handle_state_calculation_request(request)
 
+        elif isinstance(request, rr_obj.OldInstanceKillerRequest):
+            return self.handle_old_instance_request(request)
+
     def stop_handling(self):
         self.flag = False
 
@@ -322,3 +343,13 @@ class Reaper(object):
             if len(servers) == 0:
                 break
             now = time.time()
+
+    def _delete_instance(self, server, side_effect=None):
+        try:
+            LOG.info("Trying to delete server: %s", server.name)
+            nova.server_delete(server.uuid)
+            self.notify_about_instance(server)
+        except n_exc.NotFound:
+            LOG.info("Server %s not found.", server.name)
+            if side_effect:
+                raise side_effect()
