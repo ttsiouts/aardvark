@@ -24,6 +24,8 @@ def request_from_job(request):
         return ReaperRequest.from_primitive(request)
     elif request['req_type'] == "StateCalculationRequest":
         return StateCalculationRequest.from_primitive(request)
+    elif request['req_type'] == "OldInstanceKillerRequest":
+        return OldInstanceKillerRequest.from_primitive(request)
     else:
         raise exception.UnknownRequestType()
 
@@ -94,3 +96,19 @@ class StateCalculationRequest(object):
         return (self.aggregates == other.aggregates
             and self.req_type == other.req_type
         )
+
+
+class OldInstanceKillerRequest(object):
+
+    def __init__(self):
+        self.req_type = self.__class__.__name__
+        self.event_type = reaper_action.ActionEvent.KILLER_REQUEST
+
+    @staticmethod
+    def from_primitive(primitive):
+        return OldInstanceKillerRequest()
+
+    def to_dict(self):
+        return {
+            'req_type': self.req_type,
+        }

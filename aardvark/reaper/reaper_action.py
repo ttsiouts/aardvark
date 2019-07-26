@@ -30,6 +30,7 @@ class ActionEvent(enum.Enum):
     BUILD_REQUEST = "BUILD_REQUEST"
     REBUILD_REQUEST = "REBUILD_REQUEST"
     STATE_CALCULATION = "STATE_CALCULATION"
+    KILLER_REQUEST = "KILLER_REQUEST"
 
 
 class ReaperAction(base.PersistentObject):
