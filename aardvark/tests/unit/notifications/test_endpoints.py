@@ -109,10 +109,13 @@ class StateUpdateEndpointTests(EndpointsTests):
         payload = fakes.make_state_update_payload(
             instance, new_state, old_state, image_uuid, flavor_uuid)
 
+        mock_reset = mock.Mock()
+        self.endpoint._reset_instances = mock_reset
         with mock.patch.object(self.endpoint, 'trigger_reaper') as trigger:
             trigger.side_effect = exception.RetriesExceeded
             action = self.endpoint.info(None, None, None, payload, None)
             self.assertEqual(self.endpoint.handled(), action)
+            mock_reset.assert_called_once_with([instance])
 
     def test_not_to_pending(self):
         instance = "instance_uuid"
