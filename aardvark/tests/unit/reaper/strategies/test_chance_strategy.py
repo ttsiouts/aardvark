@@ -81,12 +81,15 @@ class ChanceStrategyTests(base.TestCase):
            used=used, total=total)
 
         servers = [
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=10), _id='server1'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=5), _id='server2'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=2, memory=512, disk=10), _id='server3')
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=1, memory=256, disk=10), uuid='server1'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=1, memory=256, disk=5), uuid='server2'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=2, memory=512, disk=10), uuid='server3')
         ]
 
         host = object_fakes.make_resource_provider(
@@ -109,12 +112,15 @@ class ChanceStrategyTests(base.TestCase):
            used=used, total=total)
 
         servers = [
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=10), _id='server1'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=5), _id='server2'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=2, memory=512, disk=10), _id='server3')
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=1, memory=256, disk=10), uuid='server1'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=1, memory=256, disk=5), uuid='server2'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=2, memory=512, disk=10), uuid='server3')
         ]
 
         host = object_fakes.make_resource_provider(
@@ -136,8 +142,9 @@ class ChanceStrategyTests(base.TestCase):
            used=used1, total=total1)
 
         servers_rp1 = [
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=4, memory=1024, disk=20), _id='server1'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=4, memory=1024, disk=20), uuid='server1'),
         ]
 
         rp1 = object_fakes.make_resource_provider(
@@ -198,17 +205,21 @@ class ChanceStrategyTests(base.TestCase):
            used=used2, total=total2)
 
         servers_rp1 = [
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=10), _id='server1'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=10), _id='server2'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=1, memory=256, disk=10), uuid='server1'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=1, memory=256, disk=10), uuid='server2'),
         ]
 
         servers_rp2 = [
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=2, memory=512, disk=10), _id='server3'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=10), _id='server4'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=2, memory=512, disk=10), uuid='server3'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=1, memory=256, disk=10), uuid='server4'),
         ]
 
         rp1 = object_fakes.make_resource_provider(
@@ -239,7 +250,7 @@ class ChanceStrategyTests(base.TestCase):
                 self.assertEqual(1, rp2.reserved_spots)
                 self.assertEqual(0, len(rp1.preemptible_servers))
                 self.assertEqual(1, len(rp2.preemptible_servers))
-                self.assertEqual('server4', rp2.preemptible_servers[0]._id)
+                self.assertEqual('server4', rp2.preemptible_servers[0].uuid)
 
     def test_not_enough_resources(self):
         used1 = object_fakes.make_resources(vcpu=4, memory=1024, disk=20)
@@ -253,17 +264,21 @@ class ChanceStrategyTests(base.TestCase):
            used=used2, total=total2)
 
         servers_rp1 = [
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=10), _id='server1'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=10), _id='server2'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=1, memory=256, disk=10), uuid='server1'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=1, memory=256, disk=10), uuid='server2'),
         ]
 
         servers_rp2 = [
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=10), _id='server3'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=10), _id='server4'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=1, memory=256, disk=10), uuid='server3'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=1, memory=256, disk=10), uuid='server4'),
         ]
 
         rp1 = object_fakes.make_resource_provider(
@@ -311,10 +326,12 @@ class ChanceStrategyWatermarkModeTests(base.TestCase):
            used=used2, total=total2)
 
         servers_rp1 = [
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=10), _id='server1'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=10), _id='server2'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=1, memory=256, disk=10), uuid='server1'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=1, memory=256, disk=10), uuid='server2'),
         ]
 
         rp1 = object_fakes.make_resource_provider(
@@ -347,10 +364,12 @@ class ChanceStrategyWatermarkModeTests(base.TestCase):
            used=used1, total=total1)
 
         servers = [
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=512, disk=10), _id='server1'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=512, disk=10), _id='server2'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=1, memory=512, disk=10), uuid='server1'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=1, memory=512, disk=10), uuid='server2'),
         ]
 
         host = object_fakes.make_resource_provider(
@@ -371,12 +390,15 @@ class ChanceStrategyWatermarkModeTests(base.TestCase):
            used=used1, total=total1)
 
         servers = [
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=10), _id='server1'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=5), _id='server2'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=2, memory=512, disk=10), _id='server3')
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=1, memory=256, disk=10), uuid='server1'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=1, memory=256, disk=5), uuid='server2'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=2, memory=512, disk=10), uuid='server3')
         ]
 
         host = object_fakes.make_resource_provider(
@@ -390,7 +412,7 @@ class ChanceStrategyWatermarkModeTests(base.TestCase):
             self.assertEqual([servers[0], servers[1]],
                              self.strategy.select_servers(host, requested))
             self.assertEqual(1, len(host.preemptible_servers))
-            self.assertEqual('server3', host.preemptible_servers[0]._id)
+            self.assertEqual('server3', host.preemptible_servers[0].uuid)
             self.assertEqual(1, host.reserved_spots)
 
     @mock.patch('aardvark.reaper.strategy.ReaperStrategy.check_spots')
@@ -406,17 +428,21 @@ class ChanceStrategyWatermarkModeTests(base.TestCase):
            used=used2, total=total2)
 
         servers_rp1 = [
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=10), _id='server1'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=10), _id='server2'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=1, memory=256, disk=10), uuid='server1'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=1, memory=256, disk=10), uuid='server2'),
         ]
 
         servers_rp2 = [
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=10), _id='server3'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=256, disk=10), _id='server4'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=1, memory=256, disk=10), uuid='server3'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=1, memory=256, disk=10), uuid='server4'),
         ]
 
         rp1 = object_fakes.make_resource_provider(
@@ -458,29 +484,39 @@ class ChanceStrategyWatermarkModeTests(base.TestCase):
            used=used2, total=total2)
 
         servers_rp1 = [
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=2, memory=256, disk=10), _id='server1'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=2, memory=256, disk=10), _id='server2'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=2, memory=256, disk=10), _id='server3'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=2, memory=256, disk=10), _id='server4')
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=2, memory=256, disk=10), uuid='server1'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=2, memory=256, disk=10), uuid='server2'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=2, memory=256, disk=10), uuid='server3'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=2, memory=256, disk=10), uuid='server4')
         ]
 
         servers_rp2 = [
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=128, disk=5), _id='server5'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=128, disk=5), _id='server6'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=128, disk=5), _id='server7'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=1, memory=128, disk=5), _id='server8'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=2, memory=256, disk=10), _id='server9'),
-            mock.Mock(resources=object_fakes.make_resources(
-                vcpu=2, memory=256, disk=10), _id='server10'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=1, memory=128, disk=5), uuid='server5'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=1, memory=128, disk=5), uuid='server6'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=1, memory=128, disk=5), uuid='server7'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=1, memory=128, disk=5), uuid='server8'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=2, memory=256, disk=10), uuid='server9'),
+            object_fakes.make_server(
+                resources=object_fakes.make_resources(
+                vcpu=2, memory=256, disk=10), uuid='server10'),
         ]
 
         rp1 = object_fakes.make_resource_provider(

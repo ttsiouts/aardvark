@@ -37,6 +37,7 @@ class ResourceProvider(base.PlacementObject):
         self._capabilities = None
         self.reserved_spots = 0
         self.populated = False
+        self.flavors_dict = collections.defaultdict(list)
 
     @property
     def usages(self):
@@ -64,6 +65,9 @@ class ResourceProvider(base.PlacementObject):
     @preemptible_servers.setter
     def preemptible_servers(self, new):
         self._preemptible_servers = new
+        self.flavors_dict = collections.defaultdict(list)
+        for server in new:
+            self.flavors_dict[server.flavor['original_name']].append(server)
 
     @property
     def preemptible_resources(self):
@@ -127,9 +131,6 @@ class ResourceProvider(base.PlacementObject):
             servers += instance_list.sorted_instances(self.uuid, **filters)
         self.preemptible_servers = servers
         self.populated = True
-        self.flavors_dict = collections.defaultdict(list)
-        for server in self.preemptible_servers:
-            self.flavors_dict[server.flavor['original_name']].append(server)
 
 
 class ResourceProviderList(base.PlacementObject):

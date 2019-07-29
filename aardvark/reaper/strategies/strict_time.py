@@ -13,11 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from __future__ import division
-
 from oslo_log import log as logging
 
 import aardvark.conf
+from aardvark.objects import resources as res_obj
 from aardvark.reaper.strategies import strict
 
 
@@ -36,7 +35,10 @@ class StrictTimeStrategy(strict.StrictStrategy):
     def filter_servers(self, host, requested):
         valid_servers = list()
         for fid, instance_list in host.flavors_dict.items():
-            times = requested / instance_list[0].resources
+            if requested <= instance_list[0].resources:
+                valid_servers.append(instance_list[0])
+            times = res_obj.Resources.min_ratio(requested,
+                                                instance_list[0].resources)
             if times <= len(host.flavors_dict[fid]):
                 valid_servers += host.flavors_dict[fid][:times]
             else:
