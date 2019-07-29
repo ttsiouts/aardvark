@@ -18,6 +18,7 @@ import mock
 import aardvark.conf
 from aardvark import exception
 from aardvark.reaper.strategies import strict
+from aardvark.reaper.strategies import utils
 from aardvark.tests import base
 from aardvark.tests.unit.objects import fakes as object_fakes
 
@@ -46,7 +47,7 @@ class StrictStrategyTests(base.TestCase):
         host.preemptible_servers = servers
         requested = object_fakes.make_resources(vcpu=1, memory=256, disk=5)
         result = self.strategy.find_matching_server_combinations(
-            [host], requested)
+            [host], requested, None)
         expected_instances = [server1]
         exepected_leftovers = object_fakes.make_resources(disk=5)
         self.assertEqual(expected_instances, result.instances)
@@ -72,7 +73,7 @@ class StrictStrategyTests(base.TestCase):
         host.preemptible_servers = servers
         requested = object_fakes.make_resources(vcpu=1, memory=256, disk=5)
         result = self.strategy.find_matching_server_combinations(
-            [host], requested)
+            [host], requested, None)
         expected_instances = [server2]
         exepected_leftovers = object_fakes.make_resources()
         self.assertEqual(expected_instances, result.instances)
@@ -112,7 +113,7 @@ class StrictStrategyTests(base.TestCase):
         host2.preemptible_servers = servers2
         requested = object_fakes.make_resources(vcpu=2, memory=512, disk=10)
         result = self.strategy.find_matching_server_combinations(
-            [host1, host2], requested)
+            [host1, host2], requested, None)
         expected_instances = servers1
         exepected_leftovers = object_fakes.make_resources()
         self.assertEqual(expected_instances, result.instances)
@@ -138,7 +139,7 @@ class StrictStrategyTests(base.TestCase):
         host.preemptible_servers = servers
         requested = object_fakes.make_resources(vcpu=1, memory=256, disk=5)
         result = self.strategy.find_matching_server_combinations(
-            [host], requested)
+            [host], requested, None)
         expected_instances = []
         exepected_leftovers = object_fakes.make_resources(memory=1288)
         self.assertEqual(expected_instances, result.instances)
@@ -176,7 +177,7 @@ class StrictStrategyTests(base.TestCase):
         host2.preemptible_servers = servers2
         requested = object_fakes.make_resources(vcpu=1, memory=256, disk=5)
         result = self.strategy.find_matching_server_combinations(
-            [host1, host2], requested)
+            [host1, host2], requested, None)
         expected_instances = []
         exepected_leftovers = object_fakes.make_resources(memory=1288)
         self.assertEqual(expected_instances, result.instances)
@@ -202,7 +203,7 @@ class StrictStrategyTests(base.TestCase):
         host.preemptible_servers = servers
         requested = object_fakes.make_resources(vcpu=1, memory=256, disk=35)
         result = self.strategy.find_matching_server_combinations(
-            [host], requested)
+            [host], requested, None)
         self.assertIsNone(result)
 
     def test_find_matching_server_combinations_not_enough_multiple_hosts(self):
@@ -236,7 +237,7 @@ class StrictStrategyTests(base.TestCase):
         host2.preemptible_servers = servers2
         requested = object_fakes.make_resources(vcpu=1, memory=256, disk=35)
         result = self.strategy.find_matching_server_combinations(
-            [host1, host2], requested)
+            [host1, host2], requested, None)
         self.assertIsNone(result)
 
     def test_find_matching_server_combinations_mixed_resources(self):
@@ -259,43 +260,12 @@ class StrictStrategyTests(base.TestCase):
         CONF.reaper.ram_sorting_priority = 1
         CONF.reaper.disk_sorting_priority = 3
         result = self.strategy.find_matching_server_combinations(
-            [host], requested)
+            [host], requested, None)
         expected_instances = [server2]
         exepected_leftovers = object_fakes.make_resources(disk=5)
         self.assertEqual(expected_instances, result.instances)
         self.assertEqual(exepected_leftovers, result.leftovers)
         self.assertEqual(host.uuid, result.provider.uuid)
-
-    def test_sort_combinations(self):
-
-        combo1 = strict.Combination(provider='host1', instances=['server1'],
-            leftovers=object_fakes.make_resources(vcpu=2, memory=256, disk=10))
-
-        combo2 = strict.Combination(provider='host2', instances=['server2'],
-            leftovers=object_fakes.make_resources(vcpu=1, memory=512, disk=10))
-
-        combo3 = strict.Combination(provider='host3', instances=['server3'],
-            leftovers=object_fakes.make_resources(vcpu=1, memory=512, disk=20))
-
-        combinations = [combo1, combo2, combo3]
-
-        CONF.reaper.vcpu_sorting_priority = 2
-        CONF.reaper.ram_sorting_priority = 1
-        CONF.reaper.disk_sorting_priority = 3
-        result = self.strategy.sort_combinations(combinations)
-        self.assertEqual(combo1, result)
-
-        CONF.reaper.vcpu_sorting_priority = 1
-        CONF.reaper.ram_sorting_priority = 2
-        CONF.reaper.disk_sorting_priority = 3
-        result = self.strategy.sort_combinations(combinations)
-        self.assertEqual(combo2, result)
-
-        CONF.reaper.vcpu_sorting_priority = 2
-        CONF.reaper.ram_sorting_priority = 3
-        CONF.reaper.disk_sorting_priority = 1
-        result = self.strategy.sort_combinations(combinations)
-        self.assertEqual(combo2, result)
 
     @mock.patch('aardvark.reaper.strategies.strict.StrictStrategy.'
                 'find_matching_server_combinations')
@@ -319,7 +289,7 @@ class StrictStrategyTests(base.TestCase):
             uuid='1', name='rp1', capabilities=rp_capabilities)
         server = mock.Mock(resources=object_fakes.make_resources(
             vcpu=1, memory=256, disk=10), uuid='server1')
-        combo = strict.Combination(provider=host, instances=[server],
+        combo = utils.Combination(provider=host, instances=[server],
             leftovers=object_fakes.make_resources(vcpu=2, memory=256, disk=10))
         mocked_find.return_value = combo
         fake_hosts = [mock.Mock()]
@@ -377,7 +347,7 @@ class StrictStrategyWatermarkModeTests(base.TestCase):
             uuid='1', name='rp1', capabilities=rp_capabilities)
         server = mock.Mock(resources=object_fakes.make_resources(
             vcpu=1, memory=256, disk=10), uuid='server1')
-        combo = strict.Combination(provider=host, instances=[server],
+        combo = utils.Combination(provider=host, instances=[server],
             leftovers=object_fakes.make_resources(vcpu=2, memory=256, disk=10))
         mocked_find.return_value = combo
         fake_hosts = [mock.Mock()]
@@ -414,7 +384,7 @@ class StrictStrategyWatermarkModeTests(base.TestCase):
             uuid='1', name='rp1', capabilities=rp_capabilities)
         server = mock.Mock(resources=object_fakes.make_resources(
             vcpu=1, memory=256, disk=10), uuid='server1')
-        combo = strict.Combination(provider=host, instances=[server],
+        combo = utils.Combination(provider=host, instances=[server],
             leftovers=object_fakes.make_resources(vcpu=2, memory=256, disk=10))
         mocked_find.side_effect = [combo, None]
         fake_hosts = [mock.Mock()]
@@ -444,9 +414,9 @@ class StrictStrategyWatermarkModeTests(base.TestCase):
             vcpu=1, memory=256, disk=10), uuid='server2')
         server3 = mock.Mock(resources=object_fakes.make_resources(
             vcpu=1, memory=256, disk=10), uuid='server3')
-        combo1 = strict.Combination(provider=host1, instances=[server1],
+        combo1 = utils.Combination(provider=host1, instances=[server1],
             leftovers=object_fakes.make_resources(vcpu=2, memory=256, disk=10))
-        combo2 = strict.Combination(
+        combo2 = utils.Combination(
             provider=host2, instances=[server2, server3],
             leftovers=object_fakes.make_resources(vcpu=2, memory=256, disk=10))
         mocked_find.side_effect = [combo1, combo2, None]

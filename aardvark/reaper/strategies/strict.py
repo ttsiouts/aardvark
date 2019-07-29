@@ -14,29 +14,17 @@
 #    under the License.
 
 from __future__ import division
-import collections
 import itertools
 
 from oslo_log import log as logging
 
 import aardvark.conf
-from aardvark.objects import resources as res_obj
+from aardvark.reaper.strategies import utils
 from aardvark.reaper import strategy
 
 
 LOG = logging.getLogger(__name__)
 CONF = aardvark.conf.CONF
-
-
-Combination = collections.namedtuple(
-    "Combination", "provider instances leftovers")
-
-
-def sum_resources(x):
-    resources = res_obj.Resources()
-    for y in x:
-        resources += y.resources
-    return resources
 
 
 class StrictStrategy(strategy.ReaperStrategy):
@@ -52,13 +40,11 @@ class StrictStrategy(strategy.ReaperStrategy):
         # This is the maximum number of spots that we'll try to free up
         max_allocs = num_instances * CONF.reaper.alternatives
 
-        for host in hosts:
-            host.populate(projects)
-
         for i in range(0, max_allocs):
 
             # Find all the matching flavor combinations and order them
-            combo = self.find_matching_server_combinations(hosts, requested)
+            combo = self.find_matching_server_combinations(hosts, requested,
+                                                           projects)
 
             if not combo:
                 # If we run out of combos before the max retries break and
@@ -72,7 +58,7 @@ class StrictStrategy(strategy.ReaperStrategy):
             if not combo.instances:
                 host.used_resources += requested
             else:
-                resources = sum_resources(combo.instances)
+                resources = utils.sum_resources(combo.instances)
                 host.used_resources -= resources - requested
 
             if host not in selected_hosts:
@@ -89,7 +75,7 @@ class StrictStrategy(strategy.ReaperStrategy):
 
         return selected_hosts, selected
 
-    def find_matching_server_combinations(self, hosts, requested):
+    def find_matching_server_combinations(self, hosts, requested, projects):
         """Find the best matching combination
 
         The purpose of this feature is to eliminate the idle resources. So the
@@ -99,6 +85,7 @@ class StrictStrategy(strategy.ReaperStrategy):
         only_free = False
         combinations = list()
         for host in hosts:
+            self.populate_host(host, projects)
             # NOTE(ttsiouts): If free space is enough for the new server
             # then we should not delete any of the existing servers
             LOG.debug('Requested: %s, Free: %s',
@@ -107,25 +94,27 @@ class StrictStrategy(strategy.ReaperStrategy):
                 LOG.debug('Free resources enough. Requested: %s, Free: %s',
                           requested, host.free_resources)
                 leftovers = host.free_resources - requested
-                combinations.append(Combination(provider=host,
-                                                leftovers=leftovers,
-                                                instances=[]))
+                combinations.append(utils.Combination(provider=host,
+                                                      leftovers=leftovers,
+                                                      instances=[]))
                 only_free = True
                 continue
 
-            preemptible = host.preemptible_servers
-            LOG.debug('Prememptibles: %s', host.preemptible_servers)
+            preemptible = self.filter_servers(host, requested)
+            LOG.debug('Prememptibles: %s', preemptible)
             end = len(preemptible) + 1
             for num in range(1, end):
                 num_combinations = itertools.combinations(preemptible, num)
                 for combo in num_combinations:
-                    resources = sum_resources(combo) + host.free_resources
+                    resources = (
+                        utils.sum_resources(combo) + host.free_resources)
                     if requested <= resources:
                         instances = [x for x in combo]
                         leftovers = resources - requested
-                        combinations.append(Combination(provider=host,
-                                                        leftovers=leftovers,
-                                                        instances=instances))
+                        combinations.append(
+                            utils.Combination(provider=host,
+                                              leftovers=leftovers,
+                                              instances=instances))
                     else:
                         LOG.debug("Requested: %s resources: %s. combo %s, not "
                                   "selected", requested, resources, combo)
@@ -138,24 +127,10 @@ class StrictStrategy(strategy.ReaperStrategy):
             # deleting running VMs.
             combinations = [x for x in combinations if len(x.instances) == 0]
 
-        return self.sort_combinations(combinations)
+        return utils.sort_combinations(combinations)
 
-    def sort_combinations(self, combinations):
-        """Sorts the found combinations of servers"""
-        resources = sorted([
-            ("VCPU", CONF.reaper.vcpu_sorting_priority),
-            ("MEMORY_MB", CONF.reaper.ram_sorting_priority),
-            ("DISK_GB", CONF.reaper.disk_sorting_priority)
-        ], key=lambda x: x[1])
+    def populate_host(self, host, projects):
+        host.populate(projects)
 
-        for resource, _ in resources:
-            combinations = sorted(
-                combinations, key=lambda x: getattr(x.leftovers, resource, 0))
-            minimum_value = getattr(combinations[0].leftovers, resource, 0)
-            combinations = [
-                combo for combo in combinations
-                if getattr(combo.leftovers, resource, 0) == minimum_value
-            ]
-            if len(combinations) == 1:
-                break
-        return combinations[0]
+    def filter_servers(self, host, requested):
+        return host.preemptible_servers
