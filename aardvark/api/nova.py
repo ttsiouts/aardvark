@@ -59,3 +59,9 @@ def aggregate_list():
     """Returns a list of aggregates"""
     client = _get_nova_client()
     return client.aggregates.list()
+
+
+def service_status(host, binary=None):
+    binary = binary or "nova-compute"
+    client = _get_nova_client()
+    return client.services.list(host, binary)[0]

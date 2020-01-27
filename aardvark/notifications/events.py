@@ -69,7 +69,8 @@ class SchedulingEvent(base.NotificationEvent):
     def aggregates(self):
         try:
             d = self.request_spec['nova_object.data']['requested_destination']
-            return d['nova_object.data']['aggregates']
+            aggs = d['nova_object.data']['aggregates']
+            return aggs[0].split(',')
         except TypeError:
             # In case destination is not set it will be None, so trying to
             # access its items will raise a TypeError. Just return None.

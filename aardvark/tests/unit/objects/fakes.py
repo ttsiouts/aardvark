@@ -84,4 +84,5 @@ def make_resource_provider(uuid=None, name=None, capabilities=None,
     rp._capabilities = capabilities
     rp.reserved_spots = reserved_spots
     rp.populated = True
+    rp._disabled = False
     return rp

@@ -55,6 +55,11 @@ class ChanceStrategy(strategy.ReaperStrategy):
         def get_valid_hosts(hosts, requested):
             valid_hosts = list()
             for host in hosts:
+                if host.disabled:
+                    LOG.info("Skipping host %s because it is disabled",
+                             host.name)
+                    continue
+                LOG.debug("Checing host %s", host.name)
                 host.populate(projects)
                 resources = strategy.host_potential(
                     host, host.preemptible_resources, not self.watermark_mode)
@@ -72,7 +77,11 @@ class ChanceStrategy(strategy.ReaperStrategy):
                 if host in selected_hosts:
                     continue
                 host.populate(projects)
-                valid.append(host)
+                if not host.disabled:
+                    valid.append(host)
+                else:
+                    LOG.info("Skipping host %s because it is disabled",
+                             host.name)
             return valid
 
         selected_servers = list()

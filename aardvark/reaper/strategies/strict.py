@@ -65,7 +65,7 @@ class StrictStrategy(strategy.ReaperStrategy):
                 selected_hosts.append(host)
             selected += combo.instances
             LOG.debug('List of instances: %s from host: %s selected',
-                      combo.instances, combo.provider)
+                      combo.instances, combo.provider.name)
 
         if not self.watermark_mode:
             # Watermark mode is best effort. So skip this check in this
@@ -85,6 +85,10 @@ class StrictStrategy(strategy.ReaperStrategy):
         only_free = False
         combinations = list()
         for host in hosts:
+            if host.disabled:
+                LOG.info("Skipping host %s because it is disabled", host.name)
+                continue
+            LOG.debug("Checing host %s", host.name)
             self.populate_host(host, projects)
             # NOTE(ttsiouts): If free space is enough for the new server
             # then we should not delete any of the existing servers
@@ -101,7 +105,7 @@ class StrictStrategy(strategy.ReaperStrategy):
                 continue
 
             preemptible = self.filter_servers(host, requested)
-            LOG.debug('Prememptibles: %s', preemptible)
+            LOG.debug('Preemptibles: %s', preemptible)
             end = len(preemptible) + 1
             for num in range(1, end):
                 num_combinations = itertools.combinations(preemptible, num)
