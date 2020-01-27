@@ -26,14 +26,14 @@ py27:
     - cd $CI_PROJECT_DIR
     - tox -epy27
 
-py35:
-  stage: test
-  image: gitlab-registry.cern.ch/cloud-infrastructure/cci-scripts/tox
-  except:
-    - tags
-  script:
-    - cd $CI_PROJECT_DIR
-    - scl enable rh-python35 'tox -epy35'
+#py35:
+#  stage: test
+#  image: gitlab-registry.cern.ch/cloud-infrastructure/cci-scripts/tox
+#  except:
+#    - tags
+#  script:
+#    - cd $CI_PROJECT_DIR
+#    - scl enable rh-python35 'tox -epy35'
 
 rpmbuild:
   stage: build
