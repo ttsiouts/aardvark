@@ -85,6 +85,10 @@ class StrictStrategy(strategy.ReaperStrategy):
         only_free = False
         combinations = list()
         for host in hosts:
+            if host.disabled:
+                LOG.info("Skipping host %s because it is disabled", host.name)
+                continue
+            LOG.debug("Checing host %s", host.name)
             self.populate_host(host, projects)
             # NOTE(ttsiouts): If free space is enough for the new server
             # then we should not delete any of the existing servers
@@ -101,7 +105,7 @@ class StrictStrategy(strategy.ReaperStrategy):
                 continue
 
             preemptible = self.filter_servers(host, requested)
-            LOG.debug('Prememptibles: %s', preemptible)
+            LOG.debug('Preemptibles: %s', preemptible)
             end = len(preemptible) + 1
             for num in range(1, end):
                 num_combinations = itertools.combinations(preemptible, num)

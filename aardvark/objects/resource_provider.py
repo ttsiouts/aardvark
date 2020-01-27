@@ -15,6 +15,7 @@
 
 import collections
 
+from aardvark.api import nova
 from aardvark.api import placement
 from aardvark.objects import base
 from aardvark.objects import capabilities
@@ -38,6 +39,7 @@ class ResourceProvider(base.PlacementObject):
         self.reserved_spots = 0
         self.populated = False
         self.flavors_dict = collections.defaultdict(list)
+        self._status = None
 
     @property
     def usages(self):
@@ -102,7 +104,16 @@ class ResourceProvider(base.PlacementObject):
     def __hash__(self):
         return hash(self.uuid)
 
+    @property
+    def disabled(self):
+        if self._status is None:
+            status = nova.service_status(self.name)
+            self._status = status[0].status
+        return self._status == 'disabled'
+
     def populate(self, preemptible_projects):
+        if self.disabled:
+            return
         if self.populated:
             return
         instance_list = instance.InstanceList()
@@ -118,6 +129,8 @@ class ResourceProvider(base.PlacementObject):
         self.populated = True
 
     def populate_sorted(self, preemptible_projects):
+        if self.disabled:
+            return
         if self.populated:
             return
         instance_list = instance.InstanceList()

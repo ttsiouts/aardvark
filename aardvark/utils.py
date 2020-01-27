@@ -103,6 +103,8 @@ def map_aggregate_names():
         except KeyError:
             message = "One of the configured aggregates was not found"
             raise exception.BadConfigException(message)
+    LOG.info("Mapped aggregates %s to %s",
+             CONF.reaper.watched_aggregates, uuids)
     return uuids
 
 

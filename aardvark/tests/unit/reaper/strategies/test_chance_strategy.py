@@ -45,7 +45,8 @@ class ChanceStrategyTests(base.TestCase):
         pre1 = object_fakes.make_resources(vcpu=2, memory=512, disk=10)
         free1 = object_fakes.make_resources(vcpu=2, memory=512, disk=10)
         selected_hosts = [
-            mock.Mock(free_resources=free1, preemptible_resources=pre1)
+            mock.Mock(free_resources=free1, preemptible_resources=pre1,
+                      disabled=False)
         ]
         select.return_value = selected_servers
 

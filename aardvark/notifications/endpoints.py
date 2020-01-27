@@ -36,7 +36,7 @@ CONF = aardvark.conf.CONF
 
 class SchedulingEndpoint(base.NotificationEndpoint):
 
-    event_types = ['instance.schedule']
+    event_types = ['scheduler.select_destinations.error']
 
     def __init__(self):
         super(SchedulingEndpoint, self).__init__()
@@ -105,6 +105,7 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
         if info.retries >= CONF.notification.max_handling_retries:
             LOG.info("Retries for instance %s exceeded. Setting event to "
                      "handled and returning", uuid)
+            self._reset_instances([uuid])
             return
 
         LOG.info("Notification received for uuid: %s event type: %s",

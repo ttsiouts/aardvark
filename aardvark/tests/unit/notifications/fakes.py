@@ -85,7 +85,7 @@ def make_destination_payload(aggregates):
     if aggregates:
         destination = {
             "nova_object.data": {
-                "aggregates": aggregates
+                "aggregates": [",".join(aggregates)]
             }
         }
 
