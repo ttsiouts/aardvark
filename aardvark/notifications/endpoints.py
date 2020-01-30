@@ -13,7 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from aardvark.api import nova
+from functools import wraps
+
 import aardvark.conf
 from aardvark import exception
 from aardvark.notifications import base
@@ -24,7 +25,6 @@ from aardvark.reaper import reaper_action as ra
 from aardvark.reaper import reaper_request as rr_obj
 from aardvark import utils
 
-from novaclient import exceptions as n_exc
 from oslo_log import log as logging
 
 
@@ -34,6 +34,24 @@ LOG = logging.getLogger(__name__)
 CONF = aardvark.conf.CONF
 
 
+def check_old_notification(fn):
+    @wraps(fn)
+    def decorator(self, ctxt, publisher_id, event_type, payload, metadata):
+        if CONF.notification.old_notification != -1 and metadata is not None:
+            since = utils.seconds_since(metadata['timestamp'],
+                                        regex='%Y-%m-%d %H:%M:%S.%f')
+            if CONF.notification.old_notification <= since:
+                # Older notifications are discarded
+                uuids = self.instances_from_payload(payload)
+                LOG.info("Discarding old event: %s from: %s with uuid: %s for "
+                         "instances: %s.", event_type, metadata['timestamp'],
+                         metadata['message_id'], uuids)
+                self._pre_discard_hook(payload)
+                return self.handled()
+        return fn(self, ctxt, publisher_id, event_type, payload, metadata)
+    return decorator
+
+
 class SchedulingEndpoint(base.NotificationEndpoint):
 
     event_types = ['scheduler.select_destinations.error']
@@ -41,6 +59,7 @@ class SchedulingEndpoint(base.NotificationEndpoint):
     def __init__(self):
         super(SchedulingEndpoint, self).__init__()
 
+    @check_old_notification
     def error(self, ctxt, publisher_id, event_type, payload, metadata):
         # Store the info in the database
         LOG.info("Received new scheduling info")
@@ -53,6 +72,10 @@ class SchedulingEndpoint(base.NotificationEndpoint):
             pass
         return self._default_action()
 
+    def instances_from_payload(self, payload):
+        event = events.SchedulingEvent.from_payload(payload)
+        return event.instance_uuids
+
 
 class StateUpdateEndpoint(base.NotificationEndpoint):
 
@@ -62,6 +85,7 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
         super(StateUpdateEndpoint, self).__init__()
         self.job_manager = job_manager.JobManager()
 
+    @check_old_notification
     def info(self, ctxt, publisher_id, event_type, payload, metadata):
         event = events.StateUpdateEvent.from_payload(payload)
         if event.is_failed_build() or event.is_failed_rebuild():
@@ -134,14 +158,13 @@ class StateUpdateEndpoint(base.NotificationEndpoint):
             LOG.error(e.message)
             self._reset_instances(uuids)
 
-    def _reset_instances(self, uuids):
-        for uuid in uuids:
-            try:
-                LOG.info('Trying to reset server %s to error', uuid)
-                nova.server_reset_state(uuid)
-            except n_exc.NotFound:
-                # Looks like we were late, and the server is deleted.
-                # Nothing more we can do.
-                LOG.info("Server with uuid: %s, not found.", uuid)
-                continue
-            LOG.info("Request to reset the server %s was sent.", uuid)
+    def instances_from_payload(self, payload):
+        event = events.StateUpdateEvent.from_payload(payload)
+        return [event.instance_uuid]
+
+    def _pre_discard_hook(self, payload):
+        event = events.StateUpdateEvent.from_payload(payload)
+        if event.is_failed_build() or event.is_failed_rebuild():
+            # If instance went into pending and we have to
+            # discard the notification, just reset it to ERROR
+            self._reset_instances([event.instance_uuid])
