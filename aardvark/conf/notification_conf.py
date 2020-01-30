@@ -38,6 +38,12 @@ notification_opts = [
         default=5,
         help="""
 The max number of retries of handling notifications for a given instance."""),
+    cfg.IntOpt('old_notification',
+        default=-1,
+        help="""
+Age of a notification in seconds. If a notification is older than the
+configured value, the notification is not handled. If set to -1 all
+notifications will be handled"""),
 ]
 
 

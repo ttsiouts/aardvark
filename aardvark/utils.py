@@ -182,9 +182,10 @@ def _get_now():
     return datetime.now()
 
 
-def seconds_since(since):
+def seconds_since(since, regex=None):
     # Returns the time delta in seconds.
     # Assumes that the since is in ISO 8601 format (coming from Nova API).
+    regex = regex or '%Y-%m-%dT%H:%M:%SZ'
     now = _get_now()
-    since = datetime.strptime(since, '%Y-%m-%dT%H:%M:%SZ')
+    since = datetime.strptime(since, regex)
     return (now - since).total_seconds()

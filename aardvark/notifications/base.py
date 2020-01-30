@@ -13,9 +13,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from aardvark.api import nova
 import aardvark.conf
 from aardvark.objects import base
+
+from novaclient import exceptions as n_exc
+from oslo_log import log as logging
 import oslo_messaging
+
+
+LOG = logging.getLogger(__name__)
 
 
 CONF = aardvark.conf.CONF
@@ -53,6 +60,24 @@ class NotificationEndpoint(object):
     info = _default_action
     sample = _default_action
     warn = _default_action
+
+    def instances_from_payload(self, payload):
+        return []
+
+    def _pre_discard_hook(self, payload):
+        pass
+
+    def _reset_instances(self, uuids):
+        for uuid in uuids:
+            try:
+                LOG.info('Trying to reset server %s to error', uuid)
+                nova.server_reset_state(uuid)
+            except n_exc.NotFound:
+                # Looks like we were late, and the server is deleted.
+                # Nothing more we can do.
+                LOG.info("Server with uuid: %s, not found.", uuid)
+                continue
+            LOG.info("Request to reset the server %s was sent.", uuid)
 
 
 class NotificationEvent(base.PersistentObject):
