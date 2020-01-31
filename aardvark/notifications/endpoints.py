@@ -44,8 +44,8 @@ def check_old_notification(fn):
                 # Older notifications are discarded
                 uuids = self.instances_from_payload(payload)
                 LOG.info("Discarding old event: %s from: %s with uuid: %s for "
-                         "instances: %s.", event_type, metadata['timestamp'],
-                         metadata['message_id'], uuids)
+                         "instance(s): %s.", event_type, metadata['timestamp'],
+                         metadata['message_id'], ", ".join(uuids))
                 self._pre_discard_hook(payload)
                 return self.handled()
         return fn(self, ctxt, publisher_id, event_type, payload, metadata)

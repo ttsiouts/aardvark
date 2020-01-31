@@ -119,9 +119,6 @@ class SchedulingEvent(Base):
 class InstanceSchedulingEvent(Base):
     __tablename__ = 'instance_scheduling_event'
     __table_args__ = (
-        schema.UniqueConstraint(
-            'instance_uuid', 'handled',
-             name='uniq_scheduling0instance_uuid0handled'),
         table_args()
     )
 
