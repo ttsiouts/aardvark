@@ -41,8 +41,6 @@ def upgrade():
     sa.Column('event_uuid', sa.String(36), nullable=True),
     sa.Column('handled', sa.Boolean(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('instance_uuid', 'handled',
-                        name='uniq_scheduling0instance_uuid0handled')
     )
     op.create_table('scheduling_event',
     sa.Column('created_at', sa.DateTime(), nullable=True),

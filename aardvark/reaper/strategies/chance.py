@@ -77,7 +77,8 @@ class ChanceStrategy(strategy.ReaperStrategy):
                 if host in selected_hosts:
                     continue
                 host.populate(projects)
-                valid.append(host)
+                if not host.disabled:
+                    valid.append(host)
             return valid
 
         selected_servers = list()

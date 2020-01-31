@@ -21,6 +21,7 @@ from oslo_log import log as logging
 import aardvark.conf
 from aardvark.reaper.strategies import utils
 from aardvark.reaper import strategy
+from aardvark import utils as aardvark_utils
 
 
 LOG = logging.getLogger(__name__)
@@ -60,6 +61,9 @@ class StrictStrategy(strategy.ReaperStrategy):
             else:
                 resources = utils.sum_resources(combo.instances)
                 host.used_resources -= resources - requested
+                host.preemptible_servers = [
+                    pr_server for pr_server in host.preemptible_servers
+                    if pr_server not in combo.instances]
 
             if host not in selected_hosts:
                 selected_hosts.append(host)
@@ -84,12 +88,26 @@ class StrictStrategy(strategy.ReaperStrategy):
         """
         only_free = False
         combinations = list()
-        for host in hosts:
-            if host.disabled:
-                LOG.info("Skipping host %s because it is disabled", host.name)
-                continue
+
+        timeout = CONF.reaper.parallel_timeout
+
+        @aardvark_utils.timeit
+        @aardvark_utils.parallelize(max_results=len(hosts), timeout=timeout)
+        def populate_hosts(hosts):
+            valid = []
+            for host in hosts:
+                if host.disabled:
+                    LOG.info("Skipping host %s because it is disabled",
+                             host.name)
+                    continue
+                self.populate_host(host, projects)
+                valid.append(host)
+            return valid
+
+        valid = [h for h in populate_hosts(hosts)]
+
+        for host in valid:
             LOG.debug("Checing host %s", host.name)
-            self.populate_host(host, projects)
             # NOTE(ttsiouts): If free space is enough for the new server
             # then we should not delete any of the existing servers
             LOG.debug('Requested: %s, Free: %s',
