@@ -41,7 +41,8 @@ def exception_map(f):
 class PlacementClient(object):
     """Client class for querying Placement API"""
 
-    keystone_filter = {'service_type': 'placement'}
+    keystone_filter = {'service_type': 'placement',
+                       'region_name': CONF.placement.region_name}
 
     def __init__(self):
         self.client = self._create_client()

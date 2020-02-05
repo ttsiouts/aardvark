@@ -27,7 +27,8 @@ def _get_nova_client():
         CONF, 'compute')
     session = keystone_loading.load_session_from_conf_options(
         CONF, 'compute', auth=auth_plugin)
-    return client.Client(CONF.compute.client_version, session=session)
+    return client.Client(CONF.compute.client_version, session=session,
+                         region_name=CONF.compute.region_name)
 
 
 def server_delete(server):

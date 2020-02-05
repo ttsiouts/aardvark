@@ -27,7 +27,8 @@ def _get_cinder_client():
         CONF, 'cinder')
     session = keystone_loading.load_session_from_conf_options(
         CONF, 'cinder', auth=auth_plugin)
-    return client.Client(CONF.cinder.client_version, session=session)
+    return client.Client(CONF.cinder.client_version, session=session,
+                         region_name=CONF.cinder.region_name)
 
 
 def get_image_from_volume(volume_id):

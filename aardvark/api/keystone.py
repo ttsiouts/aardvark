@@ -27,7 +27,8 @@ def _get_keystone_client():
         CONF, 'identity')
     session = keystone_loading.load_session_from_conf_options(
         CONF, 'identity', auth=auth_plugin)
-    return client.Client(session=session)
+    return client.Client(session=session,
+                         region_name=CONF.identity.region_name)
 
 
 def get_preemptible_projects():
