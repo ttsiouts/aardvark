@@ -69,7 +69,7 @@ class StrictStrategy(strategy.ReaperStrategy):
                 selected_hosts.append(host)
             selected += combo.instances
             LOG.debug('List of instances: %s from host: %s selected',
-                      combo.instances, combo.provider)
+                      combo.instances, combo.provider.name)
 
         if not self.watermark_mode:
             # Watermark mode is best effort. So skip this check in this

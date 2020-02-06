@@ -64,4 +64,4 @@ def aggregate_list():
 def service_status(host, binary=None):
     binary = binary or "nova-compute"
     client = _get_nova_client()
-    return client.services.list(host, binary)
+    return client.services.list(host, binary)[0]
