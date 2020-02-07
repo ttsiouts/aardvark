@@ -27,5 +27,6 @@ class ConfFixture(fixtures.Fixture):
     def _setUp(self):
         CONF.set_default('connection', "sqlite://", group='database')
         CONF.set_default('sqlite_synchronous', False, group='database')
+        CONF.set_default('parallel_timeout', 1, group='reaper')
         config.parse_args([], default_config_files=[])
         self.addCleanup(CONF.reset)

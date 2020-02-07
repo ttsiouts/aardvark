@@ -125,7 +125,7 @@ def _resolve_aggregate_names(aggregate_names):
     return uuids
 
 
-def parallelize(max_results=-1, num_workers=10, timeout=10):
+def parallelize(max_results=-1, num_workers=30, timeout=10):
     """Helper function to parallelize a workload
 
     This decorator can be used to parallelize a method.
@@ -139,21 +139,26 @@ def parallelize(max_results=-1, num_workers=10, timeout=10):
             queue = eventlet.queue.LightQueue()
 
             @wraps(func)
-            def parallel_task(i, *ars, **kwars):
+            def parallel_task(i, load, *ars, **kwars):
                 try:
-                    result = func(*ars, **kwars)
-                    if not isinstance(result, Iterable):
-                        result = [result]
-                    queue.put((i, result))
+                    iterator = iter(load)
+                    for work in iterator:
+                        result = func([work], *ars, **kwars)
+                        if not isinstance(result, Iterable):
+                            result = [result]
+                        if len(result) != 0:
+                            LOG.debug("Worker %s putting results %s",
+                                      i, result)
+                            queue.put((i, result))
+                        eventlet.sleep(0)
                 except Exception:
                     pass
 
             workload = args[0]
             for i, load in enumerate(split_workload(num_workers, workload)):
-                ar = [load]
-                ar += args[1:]
+                ar = args[1:]
                 greenthreads.append(
-                    (i, eventlet.spawn(parallel_task, i, *ar, **kwargs))
+                    (i, eventlet.spawn(parallel_task, i, load, *ar, **kwargs))
                 )
 
             with eventlet.timeout.Timeout(timeout, exception.ParallelTimeout):
@@ -171,10 +176,7 @@ def parallelize(max_results=-1, num_workers=10, timeout=10):
                     pass
 
             for id_, greenthread in greenthreads:
-                if id_ not in responded:
-                    greenthread.kill()
-                else:
-                    greenthread.wait()
+                greenthread.kill()
             return results
         return wrapper
     return decorator

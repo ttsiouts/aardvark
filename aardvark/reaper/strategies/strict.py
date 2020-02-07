@@ -40,12 +40,33 @@ class StrictStrategy(strategy.ReaperStrategy):
 
         # This is the maximum number of spots that we'll try to free up
         max_allocs = num_instances * CONF.reaper.alternatives
+        timeout = CONF.reaper.parallel_timeout
+
+        @aardvark_utils.timeit
+        @aardvark_utils.parallelize(max_results=max_allocs, timeout=timeout)
+        def get_valid_hosts(hosts, requested):
+            valid = []
+            for host in hosts:
+                if host.disabled:
+                    LOG.info("Skipping host %s because it is disabled",
+                             host.name)
+                    continue
+                self.populate_host(host, projects)
+                resources = strategy.host_potential(
+                    host, host.preemptible_resources, not self.watermark_mode)
+                if requested <= resources:
+                    # Create a list with the hosts that can potentially provide
+                    # the requested resources.
+                    valid.append(host)
+            return valid
+
+        valid_hosts = [h for h in get_valid_hosts(hosts, requested)]
 
         for i in range(0, max_allocs):
 
             # Find all the matching flavor combinations and order them
-            combo = self.find_matching_server_combinations(hosts, requested,
-                                                           projects)
+            combo = self.find_matching_server_combinations(
+                valid_hosts, requested, projects)
 
             if not combo:
                 # If we run out of combos before the max retries break and
@@ -89,24 +110,7 @@ class StrictStrategy(strategy.ReaperStrategy):
         only_free = False
         combinations = list()
 
-        timeout = CONF.reaper.parallel_timeout
-
-        @aardvark_utils.timeit
-        @aardvark_utils.parallelize(max_results=len(hosts), timeout=timeout)
-        def populate_hosts(hosts):
-            valid = []
-            for host in hosts:
-                if host.disabled:
-                    LOG.info("Skipping host %s because it is disabled",
-                             host.name)
-                    continue
-                self.populate_host(host, projects)
-                valid.append(host)
-            return valid
-
-        valid = [h for h in populate_hosts(hosts)]
-
-        for host in valid:
+        for host in hosts:
             LOG.debug("Checing host %s", host.name)
             # NOTE(ttsiouts): If free space is enough for the new server
             # then we should not delete any of the existing servers
