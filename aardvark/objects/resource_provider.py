@@ -146,6 +146,9 @@ class ResourceProvider(base.PlacementObject):
         self.preemptible_servers = servers
         self.populated = True
 
+    def __repr__(self):
+        return '<ResourceProvider(%s, %s)>' % (self.name, self.uuid)
+
 
 class ResourceProviderList(base.PlacementObject):
 

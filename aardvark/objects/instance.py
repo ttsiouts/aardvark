@@ -71,6 +71,9 @@ class Instance(base.BaseObject):
         # the server is most probably booting from volume
         return self.image is None
 
+    def __repr__(self):
+        return '<Instance(%s, %s)>' % (self.name, self.uuid)
+
 
 class InstanceList(base.BaseObject):
 
