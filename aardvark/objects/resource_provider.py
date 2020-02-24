@@ -17,15 +17,19 @@ import collections
 
 from aardvark.api import nova
 from aardvark.api import placement
+import aardvark.conf
 from aardvark.objects import base
 from aardvark.objects import capabilities
 from aardvark.objects import instance
+from aardvark.objects.nova import cell_mapping as nova_cm
+from aardvark.objects.nova import resource_provider as nova_rp
 from aardvark.objects import resources
 
 from oslo_log import log
 
 
 LOG = log.getLogger(__name__)
+CONF = aardvark.conf.CONF
 
 
 class ResourceProvider(base.PlacementObject):
@@ -40,14 +44,32 @@ class ResourceProvider(base.PlacementObject):
         self.populated = False
         self.flavors_dict = collections.defaultdict(list)
         self._disabled = None
+        self._usages = None
+        self._inventories = None
+
+    @staticmethod
+    def from_nova_db_model(model):
+        rp = ResourceProvider(model.uuid, model.name)
+        rp._usages = model.usages
+        rp._inventories = model.inventories
+        rp.preemptible_servers = [
+            instance.Instance.from_nova_db_model(ins, rp.uuid)
+            for ins in model.preemptible_servers]
+        rp.populated = True
+        return rp
 
     @property
     def usages(self):
-        return placement.get_resource_provider_usages(self.uuid)
+        if not self._usages:
+            self._usages = placement.get_resource_provider_usages(self.uuid)
+        return self._usages
 
     @property
     def inventories(self):
-        return placement.get_resource_provider_inventories(self.uuid)
+        if not self._inventories:
+            self._inventories = placement.get_resource_provider_inventories(
+                self.uuid)
+        return self._inventories
 
     @property
     def resource_classes(self):
@@ -151,10 +173,29 @@ class ResourceProvider(base.PlacementObject):
 
 class ResourceProviderList(base.PlacementObject):
 
-    def __init__(self, aggregates=None):
+    def __init__(self, aggregates=None, preemptible_projects=None):
         super(ResourceProviderList, self).__init__(aggregates=aggregates)
         self.aggregates = aggregates
+        self.preemptible_projects = preemptible_projects or []
 
     @property
     def resource_providers(self):
-        return placement.get_resource_providers(self.aggregates)
+        if CONF.aardvark.use_nova_api:
+            return self._populated_rps_from_nova_db()
+        else:
+            return placement.get_resource_providers(self.aggregates)
+
+    def _populated_rps_from_nova_db(self):
+        LOG.info("Populating hosts from nova db for aggegates")
+        cell_mappings = nova_cm.CellMapping.get_cell_mappings_from_aggregates(
+            self.aggregates)
+        rps = []
+        preemptible = [p.id_ for p in self.preemptible_projects]
+        for cell_mapping in cell_mappings:
+            dbrps = nova_rp.ResourceProvider.list_populated_resource_providers(
+                cell_mapping.name, preemptible)
+            rps += [
+                ResourceProvider.from_nova_db_model(dbrp) for dbrp in dbrps
+            ]
+        LOG.debug("Found hosts: %s", rps)
+        return rps

@@ -51,7 +51,7 @@ class ChanceStrategy(strategy.ReaperStrategy):
         timeout = CONF.reaper.parallel_timeout
 
         @utils.timeit
-        @utils.parallelize(max_results=max_attempts, timeout=timeout)
+        @utils.parallelize(max_results=1, timeout=timeout)
         def get_valid_hosts(hosts, requested):
             valid_hosts = list()
             for host in hosts:

@@ -45,6 +45,14 @@ class Instance(base.BaseObject):
         self._resources = None
         self.created = created
 
+    @staticmethod
+    def from_nova_db_model(model, rp_uuid=None):
+        instance = Instance(model.uuid, model.name, model.flavor,
+                            model.user_id, model.metadata, model.image,
+                            model.created, rp_uuid)
+        instance._resources = model.resources
+        return instance
+
     @property
     def resources(self):
         if not self._resources:
