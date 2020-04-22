@@ -63,3 +63,8 @@ class PersistentObject(object):
 
     def obj_get_changes(self):
         return self.changes
+
+
+class NovaLoadedObject(object):
+    """Base class for all objects stored in Nova DB"""
+    pass
