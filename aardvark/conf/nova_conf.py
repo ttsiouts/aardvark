@@ -34,6 +34,16 @@ compute_opts = [
 Selects where the API microversion requested by the novaclient.
 """
     ),
+    cfg.StrOpt("nova_api_db",
+        help="""
+Defines the connection string to the Nova API DB.
+"""
+    ),
+    cfg.StrOpt("placement_api_db",
+        help="""
+Defines the connection string to the Nova API DB.
+"""
+    ),
 ]
 
 

@@ -23,8 +23,9 @@ from aardvark.objects import resources
 class System(object):
 
     def __init__(self, aggregates=None):
-        self._rp_list = resource_provider.ResourceProviderList(aggregates)
         self._project_list = project.ProjectList()
+        self._rp_list = resource_provider.ResourceProviderList(
+                    aggregates, self.preemptible_projects)
 
     @property
     def resource_providers(self):

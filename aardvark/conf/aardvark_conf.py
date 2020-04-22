@@ -106,6 +106,13 @@ Instances that live more than the specified max_life_span will be deleted when
 the periodic check runs. NOTE: this value is expected to be in seconds.
 """
     ),
+    cfg.BoolOpt('use_db',
+                default=False,
+                help="""
+Fetch and populate resource providers using the Nova DB instead of the APIs.
+"""
+    ),
+
 ]
 
 

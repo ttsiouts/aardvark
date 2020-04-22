@@ -367,10 +367,10 @@ class Reaper(object):
 
     def _delete_instance(self, server, side_effect=None):
         try:
-            LOG.info("Trying to delete server: %s", server.name)
+            LOG.info("Trying to delete server: %s", server.uuid)
             nova.server_delete(server.uuid)
             self.notify_about_instance(server)
         except n_exc.NotFound:
-            LOG.info("Server %s not found.", server.name)
+            LOG.info("Server %s not found.", server.uuid)
             if side_effect:
                 raise side_effect()
