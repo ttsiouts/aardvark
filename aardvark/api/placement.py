@@ -15,6 +15,7 @@
 
 from aardvark.api.rest import placement
 from aardvark.objects import resources
+from aardvark import utils
 
 
 def _get_placement_client():
@@ -41,6 +42,7 @@ def get_resource_provider_inventories(resource_provider):
     return resources.Resources.obj_from_inventories(result)
 
 
+@utils.timeit
 def get_consumer_allocations(consumer, rp_uuid):
     client = _get_placement_client()
     allocations = client.get_allocations(consumer)['allocations']
