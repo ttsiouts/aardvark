@@ -19,6 +19,7 @@ import sys
 from oslo_config import cfg
 from oslo_log import log
 from oslo_service import service
+import socket
 
 from aardvark import config
 
@@ -41,6 +42,9 @@ def main():
 
 
 def prepare_service(argv=None):
+    # Load the hostname in config in order to use it later
+    CONF.host = socket.gethostname()
+
     log.register_options(CONF)
     log.set_defaults(default_log_levels=CONF.default_log_levels)
 

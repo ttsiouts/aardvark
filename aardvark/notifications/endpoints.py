@@ -40,12 +40,13 @@ def check_old_notification(fn):
         if CONF.notification.old_notification != -1 and metadata is not None:
             since = utils.seconds_since(metadata['timestamp'],
                                         regex='%Y-%m-%d %H:%M:%S.%f')
-            if CONF.notification.old_notification <= since:
+            if CONF.notification.old_notification < since:
                 # Older notifications are discarded
                 uuids = self.instances_from_payload(payload)
                 LOG.info("Discarding old event: %s from: %s with uuid: %s for "
-                         "instance(s): %s.", event_type, metadata['timestamp'],
-                         metadata['message_id'], ", ".join(uuids))
+                         "instance(s): %s. (since = %s)", event_type,
+                         metadata['timestamp'], metadata['message_id'],
+                         ", ".join(uuids), since)
                 self._pre_discard_hook(payload)
                 return self.handled()
         return fn(self, ctxt, publisher_id, event_type, payload, metadata)

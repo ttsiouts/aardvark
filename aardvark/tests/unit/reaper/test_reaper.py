@@ -19,6 +19,7 @@ from novaclient import exceptions as n_exc
 import aardvark.conf
 from aardvark import exception
 from aardvark.reaper import reaper
+from aardvark.reaper import reaper_action as ra
 from aardvark.tests import base
 from aardvark.tests.unit.objects import fakes as obj_fakes
 from aardvark.tests.unit.reaper import fakes
@@ -205,3 +206,24 @@ class ReaperTests(base.TestCase):
             mocked_time.side_effect = [1, 1, 1, 1, 100]
             self.reaper.wait_until_allocations_are_deleted(servers)
             self.assertEqual([server2], servers)
+
+    @mock.patch("aardvark.reaper.reaper_action.ReaperAction")
+    def test_handle_request_preemptible_request(self, reaper_action):
+        mock_action = mock.Mock()
+        reaper_action.return_value = mock_action
+        reaper_request = fakes.make_reaper_request()
+        with mock.patch.object(self.reaper, 'handle_reaper_request') as m:
+            m.side_effect = exception.PreemptibleRequest()
+            self.reaper.handle_request(reaper_request)
+        self.assertEqual(ra.ActionState.CANCELED, mock_action.state)
+
+    @mock.patch("aardvark.reaper.reaper_action.ReaperAction")
+    def test_handle_request_unexpected_error(self, reaper_action):
+        mock_action = mock.Mock()
+        reaper_action.return_value = mock_action
+        reaper_request = fakes.make_reaper_request()
+        with mock.patch.object(self.reaper, 'handle_reaper_request') as m:
+            reason = "unexpected error"
+            m.side_effect = Exception(reason)
+            self.reaper.handle_request(reaper_request)
+        self.assertEqual(ra.ActionState.FAILED, mock_action.state)

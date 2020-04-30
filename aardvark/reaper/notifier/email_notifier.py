@@ -21,6 +21,7 @@ import smtplib
 
 import aardvark.conf
 from aardvark.reaper.notifier import base
+from aardvark.reaper import reaper_action as ra
 
 from oslo_log import log as logging
 
@@ -28,11 +29,28 @@ from oslo_log import log as logging
 CONF = aardvark.conf.CONF
 LOG = logging.getLogger(__name__)
 
+FAILURE_BODY = """
+Dear operator,
+
+It seems that I failed to perform the following action:
+Action(uuid = '{uuid}')
+
+hostname: {host}
+
+{reason}
+
+Aardvark
+"""
+
 
 def _format_with_details(string, user_id, instance_uuid, instance_name):
-    return string.replace('<user_id>', user_id).replace(
-        '<instance_uuid>', instance_uuid).replace(
-            '<instance_name>', instance_name)
+    if user_id:
+        string = string.replace('<user_id>', user_id)
+    if instance_uuid:
+        string = string.replace('<instance_uuid>', instance_uuid)
+    if instance_name:
+        string = string.replace('<instance_name>', instance_name)
+    return string
 
 
 def _validate_email_address(address):
@@ -53,11 +71,21 @@ class EmailNotifier(base.BaseNotifier):
         super(EmailNotifier, self).__init__()
 
     def notify_about_instance(self, instance):
-        cc = [_validate_email_address(a) for a in CONF.reaper_notifier.cc]
-        bcc = [_validate_email_address(a) for a in CONF.reaper_notifier.bcc]
-        message = self.generate_message(instance, cc)
-        recipients = [_validate_email_address(instance.owner)] + cc + bcc
         try:
+            to = [_validate_email_address(instance.owner)]
+            cc = [_validate_email_address(a) for a in CONF.reaper_notifier.cc]
+            bcc = [
+                _validate_email_address(a) for a in CONF.reaper_notifier.bcc
+            ]
+            subject = _format_with_details(CONF.reaper_notifier.subject,
+                                           instance.user_id, instance.uuid,
+                                           instance.name)
+
+            body = _format_with_details(CONF.reaper_notifier.body,
+                                        instance.user_id, instance.uuid,
+                                        instance.name)
+            message = self.generate_message(to, cc, bcc, subject, body)
+            recipients = to + cc + bcc
             self.send_message(recipients, message)
         except (Exception) as e:
             LOG.error("Failed to send email message to %s regarding instance"
@@ -65,15 +93,34 @@ class EmailNotifier(base.BaseNotifier):
                       _validate_email_address(instance.owner),
                       instance.uuid, e)
 
-    def generate_message(self, instance, cc):
+    def notify_about_action(self, action):
 
-        subject = _format_with_details(CONF.reaper_notifier.subject,
-                                       instance.user_id, instance.uuid,
-                                       instance.name)
+        nop = (ra.ActionEvent.STATE_CALCULATION, ra.ActionEvent.KILLER_REQUEST)
+        if action.event in nop or action.state != ra.ActionState.FAILED:
+            return
+        if not CONF.reaper_notifier.bcc:
+            return
 
-        body = _format_with_details(CONF.reaper_notifier.body,
-                                    instance.user_id, instance.uuid,
-                                    instance.name)
+        try:
+            to = [
+                _validate_email_address(a) for a in CONF.reaper_notifier.bcc
+            ]
+            instances = action.requested_instances
+            subject = "Aardvark failed for instance(s): %s" % instances
+
+            info = {
+                "uuid": action.uuid,
+                "reason": action.fault_reason,
+                "host": CONF.host
+            }
+            body = FAILURE_BODY.format(**info)
+
+            message = self.generate_message(to, [], [], subject, body)
+            self.send_message(to, message)
+        except (Exception) as e:
+            LOG.error("Failed to send failure email because: %s", e)
+
+    def generate_message(self, to, cc, bcc, subject, body):
 
         message = multipart.MIMEMultipart('alternative')
         message.attach(text.MIMEText(body,
@@ -81,7 +128,7 @@ class EmailNotifier(base.BaseNotifier):
                                      _charset='utf-8'))
 
         message['From'] = CONF.reaper_notifier.sender
-        message['To'] = _validate_email_address(instance.owner)
+        message['To'] = ', '.join(to)
 
         if cc:
             message['Cc'] = ', '.join(cc)
@@ -103,3 +150,4 @@ class EmailNotifier(base.BaseNotifier):
         con.sendmail(from_addr=sender,
                      to_addrs=recipients,
                      msg=message.as_string())
+        con.close()

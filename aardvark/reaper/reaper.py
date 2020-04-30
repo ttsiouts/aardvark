@@ -18,6 +18,7 @@ import functools
 from novaclient import exceptions as n_exc
 from stevedore import driver
 import time
+import traceback
 
 from aardvark.api import nova
 from aardvark.api import placement
@@ -62,12 +63,17 @@ def reaper_action(fn):
             victims = fn(self, request)
             action.victims = victims
             action.state = ra.ActionState.SUCCESS
-        except exception.PreemptibleRequest as pr:
+        except exception.PreemptibleRequest:
             action.state = ra.ActionState.CANCELED
-            action.fault_reason = pr.message
-        except exception.AardvarkException as e:
+            action.fault_reason = traceback.format_exc()
+        except exception.AardvarkException:
             action.state = ra.ActionState.FAILED
-            action.fault_reason = e.message
+            action.fault_reason = "Request:\n%s\n\n%s" % (
+                    request.to_dict(), traceback.format_exc())
+        except Exception:
+            action.state = ra.ActionState.FAILED
+            action.fault_reason = "Request:\n%s\n\n%s" % (
+                    request.to_dict(), traceback.format_exc())
         finally:
             action.update()
         self.notify_about_action(action)
@@ -114,6 +120,10 @@ class Reaper(object):
             return victims
         except exception.AardvarkException as e:
             LOG.error(e.message)
+            self._reset_instances(request.uuids)
+            raise
+        except Exception as ex:
+            LOG.critical("Unexpected error: %s", ex)
             self._reset_instances(request.uuids)
             raise
 
