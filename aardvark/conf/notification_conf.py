@@ -44,6 +44,13 @@ The max number of retries of handling notifications for a given instance."""),
 Age of a notification in seconds. If a notification is older than the
 configured value, the notification is not handled. If set to -1 all
 notifications will be handled"""),
+    cfg.StrOpt("executor",
+        default=None,
+        choices=(None, 'blocking', 'threading', 'eventlet'),
+        help="""
+Selects where the API microversion requested by the cinderclient.
+"""
+    ),
 ]
 
 

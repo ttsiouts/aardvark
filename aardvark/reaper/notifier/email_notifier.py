@@ -30,9 +30,13 @@ LOG = logging.getLogger(__name__)
 
 
 def _format_with_details(string, user_id, instance_uuid, instance_name):
-    return string.replace('<user_id>', user_id).replace(
-        '<instance_uuid>', instance_uuid).replace(
-            '<instance_name>', instance_name)
+    if user_id:
+        string = string.replace('<user_id>', user_id)
+    if instance_uuid:
+        string = string.replace('<instance_uuid>', instance_uuid)
+    if instance_name:
+        string = string.replace('<instance_name>', instance_name)
+    return string
 
 
 def _validate_email_address(address):
@@ -53,11 +57,13 @@ class EmailNotifier(base.BaseNotifier):
         super(EmailNotifier, self).__init__()
 
     def notify_about_instance(self, instance):
-        cc = [_validate_email_address(a) for a in CONF.reaper_notifier.cc]
-        bcc = [_validate_email_address(a) for a in CONF.reaper_notifier.bcc]
-        message = self.generate_message(instance, cc)
-        recipients = [_validate_email_address(instance.owner)] + cc + bcc
         try:
+            cc = [_validate_email_address(a) for a in CONF.reaper_notifier.cc]
+            bcc = [
+                _validate_email_address(a) for a in CONF.reaper_notifier.bcc
+            ]
+            message = self.generate_message(instance, cc)
+            recipients = [_validate_email_address(instance.owner)] + cc + bcc
             self.send_message(recipients, message)
         except (Exception) as e:
             LOG.error("Failed to send email message to %s regarding instance"
@@ -103,3 +109,4 @@ class EmailNotifier(base.BaseNotifier):
         con.sendmail(from_addr=sender,
                      to_addrs=recipients,
                      msg=message.as_string())
+        con.close()

@@ -35,8 +35,9 @@ class ListenerManager(object):
         ]
         transports = [oslo_messaging.get_notification_transport(
             CONF, url) for url in CONF.notification.urls]
+        executor = CONF.notification.executor
         return [oslo_messaging.get_notification_listener(
-            transport, targets, endpoints, executor='threading',
+            transport, targets, endpoints, executor=executor,
             allow_requeue=True) for transport in transports]
 
     def start(self):

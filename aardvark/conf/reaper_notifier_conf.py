@@ -70,7 +70,7 @@ instance. This option is taken into account only when email notifier is used.
     ),
     cfg.StrOpt('subject',
                default="""
-Preemptible instance <instance_name> was terminated
+Preemptible instance <instance_uuid> was terminated
 """,
                help="""
 Specifies the subject of the email to the owner(s) of the instance. The user
@@ -86,8 +86,7 @@ This option is taken into account only when email notifier is used.
                default="""
 Dear <user_id>,
 
-Your preemptible instance <instance_name> (id: <instance_uuid>) was terminated
-because the resources were needed for higher priority workloads.
+Your preemptible instance with id: <instance_uuid> was terminated.
 
 Aardvark
 """,
