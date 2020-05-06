@@ -19,6 +19,7 @@ from aardvark.api import cinder
 from aardvark.db import api as dbapi
 from aardvark import exception
 from aardvark.notifications import base
+from aardvark import utils
 
 
 LOG = log.getLogger(__name__)
@@ -73,8 +74,8 @@ class SchedulingEvent(base.NotificationEvent):
             return aggs[0].split(',')
         except TypeError:
             # In case destination is not set it will be None, so trying to
-            # access its items will raise a TypeError. Just return None.
-            return None
+            # access its items will raise a TypeError.
+            return utils.get_default_aggregates()
 
     @staticmethod
     def get_by_instance_uuid(instance_uuid):

@@ -83,6 +83,12 @@ aggregate names.
 e.g. watched_aggregates={agg_name1},{agg_name2}|{agg_name3}',....
 """
     ),
+    cfg.ListOpt('default_aggregates',
+               default=[],
+               help="""
+The list of aggregate names where VMs from unmapped projects should go to.
+"""
+    ),
     cfg.BoolOpt('is_multithreaded',
                 default=False,
                 help="""

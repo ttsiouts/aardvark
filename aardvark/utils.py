@@ -31,6 +31,9 @@ LOG = log.getLogger(__name__)
 CONF = aardvark.conf.CONF
 
 
+DEFAULT_AGGREGATES = None
+
+
 def enabled(config):
     def decorator(fn):
         @wraps(fn)
@@ -92,19 +95,31 @@ class SafeDict(dict):
 
 def map_aggregate_names():
     """Maps aggregate names to uuids"""
+    return _resolve_aggregate_names(CONF.reaper.watched_aggregates)
+
+
+def get_default_aggregates():
+    global DEFAULT_AGGREGATES
+    if DEFAULT_AGGREGATES is None:
+        DEFAULT_AGGREGATES = _resolve_aggregate_names(
+            CONF.reaper.default_aggregates)
+    return DEFAULT_AGGREGATES
+
+
+def _resolve_aggregate_names(aggregate_names):
+    """Maps aggregate names to uuids"""
     aggregate_map = {
         agg.name: agg.uuid for agg in nova.aggregate_list()
     }
     uuids = []
-    for aggregates in CONF.reaper.watched_aggregates:
+    for aggregates in aggregate_names:
         try:
             aggregates = aggregates.split('|')
             uuids.append([aggregate_map[agg.strip()] for agg in aggregates])
         except KeyError:
             message = "One of the configured aggregates was not found"
             raise exception.BadConfigException(message)
-    LOG.info("Mapped aggregates %s to %s",
-             CONF.reaper.watched_aggregates, uuids)
+    LOG.info("Mapped aggregates %s to %s", aggregate_names, uuids)
     return uuids
 
 

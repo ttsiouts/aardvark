@@ -176,9 +176,11 @@ class StateUpdateEndpointTests(EndpointsTests):
         old_state = "building"
         image_uuid = "image_uuid"
         flavor_uuid = "flavor_uuid"
+        aggs = ['agg1']
         e_type = ra.ActionEvent.BUILD_REQUEST
 
-        scheduling_payload = fakes.make_scheduling_payload([instance])
+        scheduling_payload = fakes.make_scheduling_payload([instance],
+                                                           aggregates=aggs)
         scheduling_event = events.SchedulingEvent.from_payload(
             scheduling_payload)
         scheduling_event.create()
@@ -197,10 +199,12 @@ class StateUpdateEndpointTests(EndpointsTests):
         image_uuid = "image_uuid"
         flavor_uuid = "flavor_uuid"
         request_id = 123
+        aggs = ['agg1', 'agg2']
         e_type = ra.ActionEvent.BUILD_REQUEST
 
         scheduling_payload = fakes.make_scheduling_payload(instances,
-                                                           req_id=request_id)
+                                                           req_id=request_id,
+                                                           aggregates=aggs)
         scheduling_event = events.SchedulingEvent.from_payload(
             scheduling_payload)
         payload = fakes.make_state_update_payload(
@@ -215,8 +219,9 @@ class StateUpdateEndpointTests(EndpointsTests):
         self.endpoint.job_manager.post_job.assert_called_once()
         self.assertEqual(0, scheduling_event.count_scheduling_instances())
 
+    @mock.patch('aardvark.api.nova.aggregate_list')
     @mock.patch('aardvark.api.nova.server_reset_state')
-    def test_trigger_reaper_failure(self, mock_reset):
+    def test_trigger_reaper_failure(self, mock_reset, mock_list):
         instance = "instance_uuid"
         new_state = "pending"
         old_state = "building"
