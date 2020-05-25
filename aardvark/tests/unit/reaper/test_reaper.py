@@ -162,24 +162,35 @@ class ReaperTests(base.TestCase):
 
     def test_check_requested_aggregates(self):
         self.reaper.aggregates = []
-        aggregates = ['agg1', 'agg2', 'agg3']
+        request = mock.Mock()
+        request.aggregates = ['agg1', 'agg2', 'agg3']
         # No exception is raised
-        self.reaper._check_requested_aggregates(aggregates)
+        self.reaper._check_requested_aggregates(request)
 
         self.reaper.aggregates = ['agg1', 'agg2', 'agg3', 'agg4']
-        aggregates = ['agg1', 'agg2', 'agg3']
+        request.aggregates = ['agg1', 'agg2', 'agg3']
         # No exception is raised
-        self.reaper._check_requested_aggregates(aggregates)
+        self.reaper._check_requested_aggregates(request)
+        self.assertEqual(['agg1', 'agg2', 'agg3'], sorted(request.aggregates))
 
         self.reaper.aggregates = ['agg4']
-        aggregates = ['agg1', 'agg2', 'agg3']
+        request.aggregates = ['agg1', 'agg2', 'agg3']
         self.assertRaises(exception.UnwatchedAggregate,
-                          self.reaper._check_requested_aggregates, aggregates)
+                          self.reaper._check_requested_aggregates, request)
 
         self.reaper.aggregates = [1, 2, 3, 4]
-        aggregates = [0, 3, 2]
-        self.assertRaises(exception.UnwatchedAggregate,
-                          self.reaper._check_requested_aggregates, aggregates)
+        request.aggregates = [0, 3, 2]
+        self.reaper._check_requested_aggregates(request)
+        self.assertEqual([2, 3], sorted(request.aggregates))
+
+        self.reaper.aggregates = [2, 8]
+        request.aggregates = [3, 2, 5]
+        self.reaper._check_requested_aggregates(request)
+        self.assertEqual([2], sorted(request.aggregates))
+
+        self.reaper.aggregates = ['agg4']
+        request.aggregates = []
+        self.reaper._check_requested_aggregates(request)
 
     @mock.patch('aardvark.api.placement.get_consumer_allocations')
     def test_wait_until_allocations_are_deleted(self, mock_allocs):

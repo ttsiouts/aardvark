@@ -133,6 +133,10 @@ class Reaper(object):
         if request.aggregates == [] and self.aggregates[0] != []:
             request.aggregates = self.aggregates
 
+        LOG.info("Handling request for instance(s): %s, aggregates: %s, "
+                 "project: %s, resources: %s", request.uuids,
+                 request.aggregates, request.project_id, request.resources)
+
         system = system_obj.System(request.aggregates)
 
         slots = len(request.uuids)
@@ -253,7 +257,7 @@ class Reaper(object):
         for job in jobs:
             try:
                 request = rr_obj.request_from_job(job.details)
-                self._check_requested_aggregates(request.aggregates)
+                self._check_requested_aggregates(request)
                 board.claim(job, "worker")
                 LOG.debug("Claimed %s", job)
             except exception.UnknownRequestType:
@@ -308,12 +312,18 @@ class Reaper(object):
                 continue
             LOG.info("Request to reset the server %s was sent.", uuid)
 
-    def _check_requested_aggregates(self, aggregates):
+    def _check_requested_aggregates(self, request):
         if self.aggregates == []:
             return
-        for aggregate in aggregates:
-            if aggregate not in self.aggregates:
-                raise exception.UnwatchedAggregate()
+        watched = set(self.aggregates)
+        requested = set(request.aggregates)
+        common = list(watched & requested)
+        if len(common) == 0 and len(request.aggregates) != 0:
+            LOG.error('Request for not watched aggregates %s',
+                      request.aggregates)
+            raise exception.UnwatchedAggregate()
+        request.aggregates = list(common)
+        return
 
     @utils.timeit
     def wait_until_allocations_are_deleted(self, servers, timeout=20):

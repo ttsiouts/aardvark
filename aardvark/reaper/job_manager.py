@@ -38,13 +38,6 @@ class JobManager(object):
                 aggregates = [aggregates]
             self.watched_aggregates += aggregates
 
-        # HACK: if a request is received without excplicitly defined
-        # aggregates, then any of the workers can pick it up. For this
-        # reason, we make sure, that [] is always included in the list of
-        # watched aggregates.
-        if [] not in self.watched_aggregates:
-            self.watched_aggregates.append([])
-
         # A reaper instance will be created if we are not in the multithreaded
         # mode.
         if not CONF.reaper.is_multithreaded:
@@ -57,7 +50,7 @@ class JobManager(object):
         # Make sure that the forwarded requests are for watched
         # aggregates.
         if hasattr(request, 'aggregates'):
-            self._is_aggregate_watched(request.aggregates)
+            self._is_aggregate_watched(request)
         if CONF.reaper.is_multithreaded:
             self.multithreaded_handling(request)
         else:
@@ -76,11 +69,15 @@ class JobManager(object):
         with backends.backend(self.board_name, backend_conf.copy()) as board:
             board.post("ReaperJob", book=None, details=request.to_dict())
 
-    def _is_aggregate_watched(self, aggregates):
-        if self.watched_aggregates == [[]]:
+    def _is_aggregate_watched(self, request):
+        if self.watched_aggregates == []:
             return
-        for aggregate in aggregates:
-            if aggregate not in self.watched_aggregates:
-                LOG.error('Request for not watched aggregate %s', aggregate)
-                raise exception.UnwatchedAggregate()
+        watched = set(self.watched_aggregates)
+        requested = set(request.aggregates)
+        common = list(watched & requested)
+        if len(common) == 0 and len(request.aggregates) != 0:
+            LOG.error('Request for not watched aggregates %s',
+                      request.aggregates)
+            raise exception.UnwatchedAggregate()
+        request.aggregates = list(common)
         return
