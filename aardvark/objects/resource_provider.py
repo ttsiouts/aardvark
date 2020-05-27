@@ -73,10 +73,8 @@ class ResourceProvider(base.PlacementObject):
 
     @property
     def preemptible_resources(self):
-        preempt = resources.Resources()
-        for server in self.preemptible_servers:
-            preempt += server.resources
-        return preempt
+        return sum((server.resources for server in self.preemptible_servers),
+                   resources.Resources())
 
     @property
     def total_resources(self):
@@ -145,6 +143,10 @@ class ResourceProvider(base.PlacementObject):
             servers += instance_list.sorted_instances(self.uuid, **filters)
         self.preemptible_servers = servers
         self.populated = True
+
+    def __repr__(self):
+        return '<ResourceProvider(name: %s, uuid: %s)>' % (self.name,
+                                                           self.uuid)
 
 
 class ResourceProviderList(base.PlacementObject):
