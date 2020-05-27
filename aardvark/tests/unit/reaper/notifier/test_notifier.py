@@ -177,15 +177,33 @@ class EmailNotifierTests(ReaperNotifierTests):
         CONF.reaper_notifier.cc = self.cc_addresses
         CONF.reaper_notifier.bcc = self.bcc_addresses
 
-    def test_generate_message(self):
+    def test_format_with_details(self):
         instance = mock.Mock(owner='owner', uuid='fake_uuid',
                              user_id='fake_user')
         type(instance).name = mock.PropertyMock(return_value='fake_name')
         CONF.reaper_notifier.subject = 'instance <instance_uuid> killed'
+        expected_subject = 'instance fake_uuid killed'
+        subj = notifier.email_notifier._format_with_details(
+            CONF.reaper_notifier.subject, instance.user_id, instance.uuid,
+            instance.name)
+        self.assertEqual(expected_subject, subj)
         CONF.reaper_notifier.body = 'Hi <user_id>, <instance_name> was killed'
-        message = self.notifier.generate_message(instance, self.cc_addresses)
+        expected_body = 'Hi fake_user, fake_name was killed'
+        body = notifier.email_notifier._format_with_details(
+            CONF.reaper_notifier.body, instance.user_id, instance.uuid,
+            instance.name)
+        self.assertEqual(expected_body, body)
+
+    def test_generated_message(self):
+        to = ["owner@cern.ch"]
+        cc = CONF.reaper_notifier.cc
+        bcc = CONF.reaper_notifier.bcc
         expected_subject = 'instance fake_uuid killed'
         expected_body = 'Hi fake_user, fake_name was killed'
+
+        message = self.notifier.generate_message(to, cc, bcc, expected_subject,
+                                                 expected_body)
+
         subject = email.header.decode_header(message['Subject'].encode())[0][0]
         # For Python3 subject now is byte buffer so make it a string
         subject = subject.decode('utf-8')
@@ -194,7 +212,7 @@ class EmailNotifierTests(ReaperNotifierTests):
         self.assertEqual(expected_subject, subject)
         self.assertEqual(expected_body, message_body)
         self.assertEqual(CONF.reaper_notifier.sender, message['From'])
-        self.assertEqual("%s@cern.ch" % instance.owner, message['To'])
+        self.assertEqual(to[0], message['To'])
         self.assertEqual(', '.join(CONF.reaper_notifier.cc), message['cc'])
 
     @mock.patch('smtplib.SMTP')
@@ -231,42 +249,6 @@ class EmailNotifierTests(ReaperNotifierTests):
             to_addrs=recipients,
             msg=message.as_string()
         )
-
-    @mock.patch('aardvark.reaper.notifier.EmailNotifier.generate_message')
-    @mock.patch('aardvark.reaper.notifier.EmailNotifier.send_message')
-    @mock.patch('aardvark.reaper.notifier.email_notifier.LOG.error')
-    def test_notify_about_instance(self, mock_error, mock_send, mock_generate):
-        instance = mock.Mock(owner='owner', uuid='fake_uuid',
-                             user_id='fake_user')
-        type(instance).name = mock.PropertyMock(return_value='fake_name')
-        generated_message = mock.Mock()
-        mock_generate.return_value = generated_message
-        self.notifier.notify_about_instance(instance)
-        mock_generate.assert_called_once_with(instance, self.cc_addresses)
-        recipients = ["owner@cern.ch"] + self.cc_addresses + self.bcc_addresses
-        mock_send.assert_called_once_with(recipients, generated_message)
-        mock_error.assert_not_called()
-
-    @mock.patch('aardvark.reaper.notifier.EmailNotifier.generate_message')
-    @mock.patch('aardvark.reaper.notifier.EmailNotifier.send_message')
-    @mock.patch('aardvark.reaper.notifier.email_notifier.LOG.error')
-    def test_notify_about_instance_failed_to_send(self, mock_error, mock_send,
-                                                  mock_generate):
-        instance = mock.Mock(owner='owner', uuid='fake_uuid',
-                             user_id='fake_user')
-        type(instance).name = mock.PropertyMock(return_value='fake_name')
-        generated_message = mock.Mock()
-        mock_generate.return_value = generated_message
-        exception = IOError("test")
-        mock_send.side_effect = exception
-        self.notifier.notify_about_instance(instance)
-        mock_generate.assert_called_once_with(instance, self.cc_addresses)
-        recipients = ["owner@cern.ch"] + self.cc_addresses + self.bcc_addresses
-        mock_send.assert_called_once_with(recipients, generated_message)
-        error_msg = ("Failed to send email message to %s regarding instance"
-                     " %s because: %s")
-        mock_error.assert_called_once_with(error_msg, "owner@cern.ch",
-                                           instance.uuid, exception)
 
 
 class OsloNotifierTests(ReaperNotifierTests):
