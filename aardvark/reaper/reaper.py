@@ -115,6 +115,7 @@ class Reaper(object):
 
     def handle_reaper_request(self, request):
         try:
+            self._check_requested_aggregates(request)
             victims = self._do_handle_reaper_request(request)
             self._rebuild_instances(request.uuids, request.image)
             return victims
