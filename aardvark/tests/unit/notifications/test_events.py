@@ -14,6 +14,8 @@
 #    under the License.
 
 
+import mock
+
 from aardvark.notifications import events
 from aardvark.tests import base
 from aardvark.tests.unit.notifications import fakes
@@ -44,12 +46,14 @@ class SchedulingEventTests(EventTests):
         self.assertEqual(project, event.project_id)
         self.assertTrue(event.multiple_instances)
 
-    def test_scheduling_event_no_aggregates(self):
+    @mock.patch('aardvark.utils.get_default_aggregates')
+    def test_scheduling_event_no_aggregates(self, mock_aggs):
+        mock_aggs.return_value = []
         instances = ["instance_uuid1"]
         payload = fakes.make_scheduling_payload(instances)
         event = events.SchedulingEvent.from_payload(payload)
         self.assertEqual(instances, event.instance_uuids)
-        self.assertIsNone(event.aggregates)
+        self.assertEqual(0, len(event.aggregates))
         self.assertTrue(not event.multiple_instances)
 
 
