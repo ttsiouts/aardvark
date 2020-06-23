@@ -102,7 +102,7 @@ def get_default_aggregates():
     global DEFAULT_AGGREGATES
     if DEFAULT_AGGREGATES is None:
         DEFAULT_AGGREGATES = [
-            agg for agg in nova.aggregate_list()
+            agg.uuid for agg in nova.aggregate_list()
             if agg.metadata.get('cell_type', None) == 'default'
         ]
     return DEFAULT_AGGREGATES
