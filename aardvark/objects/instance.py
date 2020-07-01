@@ -79,6 +79,17 @@ class Instance(base.BaseObject):
         # the server is most probably booting from volume
         return self.image is None
 
+    def inflate(self):
+        # When we are pulling instances from placement,
+        # the instance object is missing some information
+        # that we could find useful (e.g. name, metadata)
+        api_instance = nova.server_get(self.uuid)
+        self.id = api_instance.id
+        self.name = api_instance.name
+        self.flavor = api_instance.flavor
+        self.metadata = api_instance.metadata
+        self.created = api_instance.created
+
     def __repr__(self):
         return '<Instance(uuid: %s)>' % (self.uuid)
 

@@ -367,6 +367,9 @@ class Reaper(object):
 
     def _delete_instance(self, server, side_effect=None):
         try:
+            # Inflate the instance from Nova API
+            LOG.info("Inflating server from Nova API: %s", server.uuid)
+            server.inflate()
             LOG.info("Trying to delete server: %s", server.uuid)
             nova.server_delete(server.uuid)
             self.notify_about_instance(server)

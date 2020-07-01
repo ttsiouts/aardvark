@@ -37,6 +37,11 @@ def server_delete(server):
     return client.servers.delete(server)
 
 
+def server_get(server):
+    client = _get_nova_client()
+    return client.servers.get(server)
+
+
 def server_rebuild(server, image):
     """Rebuilds the given server"""
     client = _get_nova_client()

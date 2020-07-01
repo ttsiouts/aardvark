@@ -91,7 +91,7 @@ This option is taken into account only when email notifier is used.
                default="""
 Dear <user_id>,
 
-Your preemptible instance with id: <instance_uuid> was terminated.
+Your preemptible instance <instance_name> (id: <instance_uuid>) was terminated.
 
 Aardvark
 """,
