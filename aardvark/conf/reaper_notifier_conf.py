@@ -32,6 +32,8 @@ possible options would be the following:
 * oslo:  Sends a standard OpenStack notification
 * email: Emails the owner of the instance (To use this option more config
                                            options are needed)
+* megabus: Sends megabus notifications regarding reaper actions
+           (To use this option more config options are needed)
 """
     ),
     cfg.StrOpt('sender',
@@ -118,6 +120,37 @@ used.
                 help="""
 Specifies the topics where the reaper notifications will be sent.
 This option is taken into account only when oslo notifier is used.
+"""
+    ),
+    cfg.ListOpt('megabus_queues',
+               help="""
+Specifies the megabus queues where the notifications will be sent.
+This option is taken into account only when megabus notifier is used.
+"""
+    ),
+    cfg.StrOpt('megabus_server',
+               help="""
+Specifies the megabus server where the notifications will be sent.
+This option is taken into account only when megabus notifier is used.
+"""
+    ),
+    cfg.StrOpt('megabus_user',
+               help="""
+Specifies the megabus user that will be used to authenticate to the megabus
+server. This option is taken into account only when megabus notifier is used.
+"""
+    ),
+    cfg.StrOpt('megabus_password',
+               help="""
+Specifies the password that will be used to authenticate to the megabus server.
+This option is taken into account only when megabus notifier is used.
+"""
+    ),
+    cfg.IntOpt('ttl',
+               default=172800,
+               help="""
+Specifies the time to live for megabus notifications. This option is taken into
+account only when megabus notifier is used.
 """
     ),
 ]

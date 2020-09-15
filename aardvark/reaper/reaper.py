@@ -232,8 +232,8 @@ class Reaper(object):
             try:
                 notifier.notify_about_instance(instance)
             except Exception as e:
-                LOG.error("Error while notifying for instance %s: %s",
-                          instance.uuid, e)
+                LOG.error("Error while notifying with %s for instance %s: %s",
+                          notifier.name, instance.uuid, e)
                 continue
 
     def notify_about_action(self, action):
@@ -241,8 +241,8 @@ class Reaper(object):
             try:
                 notifier.notify_about_action(action)
             except Exception as e:
-                LOG.error("Error while notifying for action %s: %s",
-                          action.uuid, e)
+                LOG.error("Error while notifying with %s for action %s: %s",
+                          notifier.name, action.uuid, e)
                 continue
 
     def job_handler(self):
